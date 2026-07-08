@@ -1,0 +1,120 @@
+{
+  "Function": {
+    "prefix": "func",
+    "body": [
+      "func ${1:name}(${2:params}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Function declaration"
+  },
+  "Function with return type": {
+    "prefix": "funcret",
+    "body": [
+      "func ${1:name}(${2:params}) -> ${3:type} {",
+      "\treturn ${0:value}",
+      "}"
+    ],
+    "description": "Function declaration with a return type"
+  },
+  "If": {
+    "prefix": "if",
+    "body": [
+      "if ${1:condition} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "If statement"
+  },
+  "If / else": {
+    "prefix": "ifelse",
+    "body": [
+      "if ${1:condition} {",
+      "\t$2",
+      "} else {",
+      "\t$0",
+      "}"
+    ],
+    "description": "If / else statement"
+  },
+  "For in": {
+    "prefix": "forin",
+    "body": [
+      "for ${1:item} in ${2:collection} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "For-in loop over a collection"
+  },
+  "For (C-style)": {
+    "prefix": "forc",
+    "body": [
+      "for ${1:i} := 0; ${1:i} < ${2:n}; ${1:i} = ${1:i} + 1 {",
+      "\t$0",
+      "}"
+    ],
+    "description": "C-style for loop"
+  },
+  "While": {
+    "prefix": "while",
+    "body": [
+      "while ${1:condition} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "While loop"
+  },
+  "Switch": {
+    "prefix": "switch",
+    "body": [
+      "switch ${1:subject} {",
+      "\tcase ${2:value}:",
+      "\t\t$3",
+      "\tdefault:",
+      "\t\t$0",
+      "}"
+    ],
+    "description": "Switch statement"
+  },
+  "Try / catch": {
+    "prefix": "trycatch",
+    "body": [
+      "try {",
+      "\t$1",
+      "} catch ${2:e} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Try / catch block"
+  },
+  "Test": {
+    "prefix": "test",
+    "body": [
+      "test \"${1:description}\" {",
+      "\tassert(${0:condition})",
+      "}"
+    ],
+    "description": "Inline test block"
+  },
+  "Var": {
+    "prefix": "var",
+    "body": [
+      "var ${1:name} = ${0:value}"
+    ],
+    "description": "Variable declaration"
+  },
+  "Const": {
+    "prefix": "const",
+    "body": [
+      "const ${1:name} = ${0:value}"
+    ],
+    "description": "Top-level constant declaration"
+  },
+  "Type alias": {
+    "prefix": "type",
+    "body": [
+      "type ${1:Name} = ${0:type}"
+    ],
+    "description": "Type alias declaration"
+  }
+}

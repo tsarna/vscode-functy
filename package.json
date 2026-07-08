@@ -1,0 +1,135 @@
+{
+  "name": "vscode-functy",
+  "displayName": "functy",
+  "description": "Syntax highlighting, snippets, commands, and test integration for functy (.cty) files",
+  "version": "0.1.0",
+  "publisher": "tsarna",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tsarna/vscode-functy"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Formatters",
+    "Testing"
+  ],
+  "keywords": [
+    "functy",
+    "cty",
+    "hcl",
+    "cty-lang"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "workspaceContains:**/*.cty"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "functy",
+        "aliases": [
+          "functy",
+          "Functy"
+        ],
+        "extensions": [
+          ".cty"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icon.png",
+          "dark": "./icon.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "functy",
+        "scopeName": "source.functy",
+        "path": "./syntaxes/functy.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "functy",
+        "path": "./snippets/functy.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "functy.run",
+        "title": "Run File",
+        "category": "functy"
+      },
+      {
+        "command": "functy.check",
+        "title": "Check File",
+        "category": "functy"
+      },
+      {
+        "command": "functy.formatDocument",
+        "title": "Format Document",
+        "category": "functy"
+      }
+    ],
+    "menus": {
+      "editor/title/run": [
+        {
+          "command": "functy.run",
+          "when": "resourceLangId == functy",
+          "group": "functy"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "functy.run",
+          "when": "resourceLangId == functy"
+        },
+        {
+          "command": "functy.check",
+          "when": "resourceLangId == functy"
+        },
+        {
+          "command": "functy.formatDocument",
+          "when": "resourceLangId == functy"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "functy",
+      "properties": {
+        "functy.path": {
+          "type": "string",
+          "default": "functy",
+          "description": "Path to the functy binary (a single executable, not a command line with arguments). Defaults to 'functy' on your PATH."
+        },
+        "functy.runFunc": {
+          "type": "string",
+          "default": "main",
+          "description": "Entry function invoked by the 'functy: Run File' command."
+        },
+        "functy.checkOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Type-check .cty files with 'functy check' when they are saved, reporting diagnostics in the Problems panel. Check is side-effect-free (it does not run your code)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.1",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.28.0",
+    "typescript": "^5.7.0"
+  }
+}

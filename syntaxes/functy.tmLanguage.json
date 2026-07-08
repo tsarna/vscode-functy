@@ -1,0 +1,242 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "functy",
+  "scopeName": "source.functy",
+  "fileTypes": ["cty"],
+  "patterns": [
+    { "include": "#comment_block" },
+    { "include": "#comment_line" },
+    { "include": "#func_decl" },
+    { "include": "#type_decl" },
+    { "include": "#test_decl" },
+    { "include": "#declaration_keyword" },
+    { "include": "#control_keyword" },
+    { "include": "#error_keyword" },
+    { "include": "#literal" },
+    { "include": "#type_keyword" },
+    { "include": "#string" },
+    { "include": "#heredoc" },
+    { "include": "#number" },
+    { "include": "#builtin_function" },
+    { "include": "#function_call" },
+    { "include": "#operator" }
+  ],
+  "repository": {
+    "comment_line": {
+      "patterns": [
+        {
+          "comment": "Directive comment: //<namespace>:<name> with no space after //",
+          "name": "comment.line.double-slash.directive.functy",
+          "match": "(//)([a-zA-Z_][A-Za-z0-9_.-]*:[^\\s].*)$"
+        },
+        {
+          "name": "comment.line.double-slash.functy",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.line.number-sign.functy",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "comment_block": {
+      "name": "comment.block.functy",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    "func_decl": {
+      "comment": "func <name> — colorize the declaration keyword and function name",
+      "match": "\\b(func)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+      "captures": {
+        "1": { "name": "storage.type.function.functy" },
+        "2": { "name": "entity.name.function.functy" }
+      }
+    },
+    "type_decl": {
+      "comment": "top-level type alias: type <Name> = ...",
+      "match": "^\\s*(type)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+      "captures": {
+        "1": { "name": "storage.type.functy" },
+        "2": { "name": "entity.name.type.functy" }
+      }
+    },
+    "test_decl": {
+      "comment": "top-level test block: test \"description\" { ... }",
+      "match": "^\\s*(test)\\b(?=\\s*\")",
+      "captures": {
+        "1": { "name": "keyword.control.test.functy" }
+      }
+    },
+    "declaration_keyword": {
+      "name": "storage.type.functy",
+      "match": "\\b(func|var|const)\\b"
+    },
+    "control_keyword": {
+      "name": "keyword.control.functy",
+      "match": "\\b(if|else|for|while|in|break|continue|switch|case|default|fallthrough|return)\\b"
+    },
+    "error_keyword": {
+      "name": "keyword.control.exception.functy",
+      "match": "\\b(try|catch|finally|defer|throw)\\b"
+    },
+    "literal": {
+      "name": "constant.language.functy",
+      "match": "\\b(true|false|null)\\b"
+    },
+    "type_keyword": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.functy",
+          "match": "\\b(string|number|bool|any)\\b"
+        },
+        {
+          "comment": "type constructors, only in constructor form: list(...), object({...})",
+          "name": "support.type.functy",
+          "match": "\\b(list|set|map|object|tuple|optional)\\b(?=\\s*\\()"
+        }
+      ]
+    },
+    "string": {
+      "name": "string.quoted.double.functy",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "meta.embedded.line.functy",
+          "begin": "\\$\\{",
+          "beginCaptures": {
+            "0": { "name": "punctuation.section.embedded.begin.functy" }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": { "name": "punctuation.section.embedded.end.functy" }
+          },
+          "patterns": [ { "include": "#expression" } ]
+        },
+        {
+          "name": "meta.embedded.line.functy",
+          "begin": "%\\{",
+          "beginCaptures": {
+            "0": { "name": "punctuation.section.embedded.begin.functy" }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": { "name": "punctuation.section.embedded.end.functy" }
+          },
+          "patterns": [
+            { "include": "#control_keyword" },
+            { "include": "#expression" }
+          ]
+        },
+        {
+          "name": "constant.character.escape.functy",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "heredoc": {
+      "name": "string.unquoted.heredoc.functy",
+      "begin": "<<-?(\\w+)$",
+      "beginCaptures": {
+        "1": { "name": "keyword.operator.heredoc.functy" }
+      },
+      "end": "^\\s*\\1$",
+      "endCaptures": {
+        "0": { "name": "keyword.operator.heredoc.functy" }
+      },
+      "patterns": [
+        {
+          "name": "meta.embedded.line.functy",
+          "begin": "\\$\\{",
+          "beginCaptures": {
+            "0": { "name": "punctuation.section.embedded.begin.functy" }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": { "name": "punctuation.section.embedded.end.functy" }
+          },
+          "patterns": [ { "include": "#expression" } ]
+        }
+      ]
+    },
+    "number": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.functy",
+          "match": "\\b[0-9]+\\.[0-9]+([eE][+-]?[0-9]+)?\\b"
+        },
+        {
+          "name": "constant.numeric.integer.functy",
+          "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "builtin_function": {
+      "name": "support.function.builtin.functy",
+      "match": "\\b(assert|skip|error|cond|switch|try|can|typeof|typekind|doc|help|eval)\\b(?=\\s*\\()"
+    },
+    "function_call": {
+      "name": "entity.name.function.call.functy",
+      "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)(?=\\s*\\()"
+    },
+    "operator": {
+      "patterns": [
+        {
+          "name": "keyword.operator.arrow.functy",
+          "match": "->"
+        },
+        {
+          "name": "keyword.operator.declaration.functy",
+          "match": ":="
+        },
+        {
+          "name": "keyword.operator.namespace.functy",
+          "match": "::"
+        },
+        {
+          "name": "keyword.operator.splat.functy",
+          "match": "\\.\\.\\."
+        },
+        {
+          "name": "keyword.operator.comparison.functy",
+          "match": "==|!=|<=|>="
+        },
+        {
+          "name": "keyword.operator.logical.functy",
+          "match": "&&|\\|\\||!"
+        },
+        {
+          "name": "keyword.operator.comparison.functy",
+          "match": "<|>"
+        },
+        {
+          "name": "keyword.operator.assignment.functy",
+          "match": "="
+        },
+        {
+          "name": "keyword.operator.ternary.functy",
+          "match": "\\?|:"
+        },
+        {
+          "name": "keyword.operator.arithmetic.functy",
+          "match": "\\+|-|\\*|/|%"
+        }
+      ]
+    },
+    "expression": {
+      "comment": "Shared HCL-style expression syntax used on statement RHSs and inside interpolations.",
+      "patterns": [
+        { "include": "#comment_block" },
+        { "include": "#comment_line" },
+        { "include": "#literal" },
+        { "include": "#type_keyword" },
+        { "include": "#string" },
+        { "include": "#heredoc" },
+        { "include": "#number" },
+        { "include": "#builtin_function" },
+        { "include": "#function_call" },
+        { "include": "#operator" }
+      ]
+    }
+  }
+}
