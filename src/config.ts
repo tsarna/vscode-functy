@@ -24,6 +24,11 @@ export function checkOnSave(): boolean {
   return vscode.workspace.getConfiguration('functy').get<boolean>('checkOnSave', true);
 }
 
+/** Whether to type-check the unsaved buffer live as you type (setting `functy.checkOnType`). */
+export function checkOnType(): boolean {
+  return vscode.workspace.getConfiguration('functy').get<boolean>('checkOnType', false);
+}
+
 /** Working directory for a run: the document's workspace folder, else its own directory. */
 export function cwdFor(uri: vscode.Uri): string | undefined {
   const folder = vscode.workspace.getWorkspaceFolder(uri);

@@ -32,3 +32,9 @@ and test are read from stderr, leaving stdout free for `println()` output).
   `functy eval` and show the result inline and in the output channel.
 - **functy: Run with Arguments…** — prompt for an entry function and arguments,
   then run.
+- Task provider (`functy` tasks: check, test, fmt over the workspace) and
+  **Check Workspace** / **Format Workspace** commands (`functy check --json .`,
+  `functy fmt -w .`).
+- **functy.checkOnType** (opt-in, default off) — live type-checking of the
+  unsaved buffer as you type, via `functy check --json -`. Supersedes
+  check-on-save when enabled.

@@ -1,12 +1,23 @@
 import * as vscode from 'vscode';
-import { checkDocument, checkFile, runFile, runFileWithArgs } from './commands';
-import { checkOnSave } from './config';
+import {
+  checkBuffer,
+  checkDocument,
+  checkFile,
+  checkWorkspace,
+  formatWorkspace,
+  runFile,
+  runFileWithArgs,
+} from './commands';
+import { checkOnSave, checkOnType } from './config';
 import { evaluateSelection, registerEvaluate } from './evaluate';
 import { formattingProvider } from './formatter';
 import { registerReplLifecycle, sendToRepl, startRepl } from './repl';
 import { symbolProvider } from './symbols';
+import { registerTasks } from './tasks';
 import { createTestController } from './testController';
 import { checkBinaryVersion } from './version';
+
+const CHECK_ON_TYPE_DEBOUNCE_MS = 350;
 
 export function activate(context: vscode.ExtensionContext): void {
   const diagnostics = vscode.languages.createDiagnosticCollection('functy');
@@ -16,6 +27,8 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('functy.run', () => runFile(diagnostics)),
     vscode.commands.registerCommand('functy.runWithArgs', () => runFileWithArgs(diagnostics)),
     vscode.commands.registerCommand('functy.check', () => checkFile(diagnostics)),
+    vscode.commands.registerCommand('functy.checkWorkspace', () => checkWorkspace(diagnostics)),
+    vscode.commands.registerCommand('functy.formatWorkspace', () => formatWorkspace()),
     vscode.commands.registerCommand('functy.evaluateSelection', () => evaluateSelection()),
     vscode.commands.registerCommand('functy.formatDocument', () =>
       vscode.commands.executeCommand('editor.action.formatDocument'),
@@ -27,24 +40,74 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   registerReplLifecycle(context);
   registerEvaluate(context);
+  registerTasks(context);
 
-  // Diagnostics from check/run are computed one-shot and become stale as soon as
-  // the text changes (their ranges no longer line up). Clear them on edit; a fresh
-  // set is produced on the next save (if checkOnSave) or manual Check/Run.
+  // --- Diagnostics lifecycle -------------------------------------------------
+  // checkOnType (opt-in): live single-buffer diagnostics as you type, debounced,
+  //   fed to `functy check --json -` on stdin (no save). Cross-file references are
+  //   not resolved (single buffer), which is why it is opt-in.
+  // Otherwise: check/run diagnostics are one-shot and go stale on edit, so clear
+  //   them on change; a fresh set comes from checkOnSave or manual Check/Run.
+  const debounce = new Map<string, NodeJS.Timeout>();
+  const cancelPending = (key: string) => {
+    const t = debounce.get(key);
+    if (t) {
+      clearTimeout(t);
+      debounce.delete(key);
+    }
+  };
+
+  const checkOpenBuffers = () => {
+    if (!checkOnType()) {
+      return;
+    }
+    for (const doc of vscode.workspace.textDocuments) {
+      if (doc.languageId === 'functy') {
+        void checkBuffer(doc, diagnostics);
+      }
+    }
+  };
+  checkOpenBuffers();
+
   context.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument((doc) => {
+      if (doc.languageId === 'functy' && checkOnType()) {
+        void checkBuffer(doc, diagnostics);
+      }
+    }),
     vscode.workspace.onDidChangeTextDocument((e) => {
-      if (e.document.languageId === 'functy' && e.contentChanges.length > 0) {
-        diagnostics.delete(e.document.uri);
+      if (e.document.languageId !== 'functy' || e.contentChanges.length === 0) {
+        return;
+      }
+      const key = e.document.uri.toString();
+      if (checkOnType()) {
+        cancelPending(key);
+        debounce.set(
+          key,
+          setTimeout(() => {
+            debounce.delete(key);
+            void checkBuffer(e.document, diagnostics);
+          }, CHECK_ON_TYPE_DEBOUNCE_MS),
+        );
+      } else {
+        diagnostics.delete(e.document.uri); // stale
       }
     }),
     vscode.workspace.onDidCloseTextDocument((doc) => {
       if (doc.languageId === 'functy') {
+        cancelPending(doc.uri.toString());
         diagnostics.delete(doc.uri);
       }
     }),
     vscode.workspace.onDidSaveTextDocument((doc) => {
-      if (doc.languageId === 'functy' && checkOnSave()) {
+      // On-type already keeps diagnostics current; only save-check when it's off.
+      if (doc.languageId === 'functy' && checkOnSave() && !checkOnType()) {
         void checkDocument(doc.uri, diagnostics, { silent: true });
+      }
+    }),
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('functy.checkOnType')) {
+        checkOpenBuffers();
       }
     }),
   );

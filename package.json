@@ -60,6 +60,23 @@
         "path": "./snippets/functy.json"
       }
     ],
+    "taskDefinitions": [
+      {
+        "type": "functy",
+        "required": ["command"],
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "The functy subcommand to run (e.g. check, test, fmt)."
+          },
+          "args": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Additional arguments passed after the subcommand."
+          }
+        }
+      }
+    ],
     "commands": [
       {
         "command": "functy.run",
@@ -74,6 +91,16 @@
       {
         "command": "functy.check",
         "title": "Check File",
+        "category": "functy"
+      },
+      {
+        "command": "functy.checkWorkspace",
+        "title": "Check Workspace",
+        "category": "functy"
+      },
+      {
+        "command": "functy.formatWorkspace",
+        "title": "Format Workspace",
         "category": "functy"
       },
       {
@@ -119,6 +146,14 @@
           "when": "resourceLangId == functy"
         },
         {
+          "command": "functy.checkWorkspace",
+          "when": "workspaceFolderCount != 0"
+        },
+        {
+          "command": "functy.formatWorkspace",
+          "when": "workspaceFolderCount != 0"
+        },
+        {
           "command": "functy.formatDocument",
           "when": "resourceLangId == functy"
         },
@@ -161,6 +196,11 @@
           "type": "boolean",
           "default": true,
           "description": "Type-check .cty files with 'functy check' when they are saved, reporting diagnostics in the Problems panel. Check is side-effect-free (it does not run your code)."
+        },
+        "functy.checkOnType": {
+          "type": "boolean",
+          "default": false,
+          "description": "Type-check the unsaved buffer live as you type (debounced), via 'functy check --json -', instead of only on save. Off by default because it spawns a functy process on each edit pause. When enabled, it supersedes check-on-save."
         }
       }
     }

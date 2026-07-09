@@ -1,3 +1,4 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { cwdFor, outputChannel, runFunc, runFuncty } from './config';
 
@@ -45,31 +46,40 @@ function parseReport(text: string): JsonDiagnostics | null {
   }
 }
 
+/** Build a vscode.Diagnostic from a functy report entry. */
+function toDiagnostic(d: JsonDiagnostic): vscode.Diagnostic {
+  const message = d.detail ? `${d.summary}\n\n${d.detail}` : d.summary;
+  const diag = new vscode.Diagnostic(
+    rangeFrom(d.location),
+    message,
+    d.severity === 'warning'
+      ? vscode.DiagnosticSeverity.Warning
+      : vscode.DiagnosticSeverity.Error,
+  );
+  diag.source = 'functy';
+  return diag;
+}
+
 /**
  * Apply a diagnostics report to the collection: clear the checked file, then set
  * the fresh diagnostics grouped by their own source file (usually just the
- * checked one). Returns the number of diagnostics applied.
+ * checked one). Location paths are resolved relative to `baseDir` when given.
+ * Returns the number of diagnostics applied.
  */
 function applyReport(
   report: JsonDiagnostics,
   defaultUri: vscode.Uri,
   diagnostics: vscode.DiagnosticCollection,
+  baseDir?: string,
 ): number {
   const byUri = new Map<string, vscode.Diagnostic[]>();
   for (const d of report.diagnostics) {
-    const targetUri = d.location ? vscode.Uri.file(d.location.file) : defaultUri;
-    const message = d.detail ? `${d.summary}\n\n${d.detail}` : d.summary;
-    const diag = new vscode.Diagnostic(
-      rangeFrom(d.location),
-      message,
-      d.severity === 'warning'
-        ? vscode.DiagnosticSeverity.Warning
-        : vscode.DiagnosticSeverity.Error,
-    );
-    diag.source = 'functy';
+    const targetUri = d.location
+      ? vscode.Uri.file(baseDir ? path.resolve(baseDir, d.location.file) : d.location.file)
+      : defaultUri;
     const key = targetUri.toString();
     const arr = byUri.get(key) ?? [];
-    arr.push(diag);
+    arr.push(toDiagnostic(d));
     byUri.set(key, arr);
   }
 
@@ -78,6 +88,18 @@ function applyReport(
     diagnostics.set(vscode.Uri.parse(key), arr);
   }
   return report.diagnostics.length;
+}
+
+/** The workspace folder of the active editor, or the first workspace folder. */
+function activeWorkspaceFolder(): vscode.WorkspaceFolder | undefined {
+  const editor = vscode.window.activeTextEditor;
+  if (editor) {
+    const f = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+    if (f) {
+      return f;
+    }
+  }
+  return vscode.workspace.workspaceFolders?.[0];
 }
 
 /**
@@ -269,4 +291,99 @@ export async function checkFile(diagnostics: vscode.DiagnosticCollection): Promi
   }
   await editor.document.save();
   await checkDocument(editor.document.uri, diagnostics, { silent: false });
+}
+
+/**
+ * Live single-buffer check via `functy check --json - --filename`, feeding the
+ * unsaved document text on stdin (no disk write). Silent: used for on-type
+ * diagnostics, so spawn/parse failures are swallowed. Only the buffer is checked,
+ * so cross-file references are not resolved.
+ */
+export async function checkBuffer(
+  document: vscode.TextDocument,
+  diagnostics: vscode.DiagnosticCollection,
+): Promise<void> {
+  const uri = document.uri;
+  let res;
+  try {
+    res = await runFuncty(['check', '--json', '-', '--filename', uri.fsPath], {
+      cwd: cwdFor(uri),
+      stdin: document.getText(),
+    });
+  } catch {
+    return;
+  }
+  const report = parseReport(res.stderr);
+  if (report) {
+    applyReport(report, uri, diagnostics);
+  }
+}
+
+/** Check every .cty file under the workspace and populate the Problems panel. */
+export async function checkWorkspace(diagnostics: vscode.DiagnosticCollection): Promise<void> {
+  const folder = activeWorkspaceFolder();
+  if (!folder) {
+    vscode.window.showErrorMessage('functy: no workspace folder open.');
+    return;
+  }
+  const cwd = folder.uri.fsPath;
+  const out = outputChannel();
+  out.clear();
+  out.appendLine(`$ functy check --json . (in ${cwd})`);
+
+  let res;
+  try {
+    res = await runFuncty(['check', '--json', '.'], { cwd });
+  } catch (err) {
+    vscode.window.showErrorMessage(`functy: ${(err as Error).message}`);
+    return;
+  }
+
+  const report = parseReport(res.stderr);
+  if (!report) {
+    out.appendLine(res.stderr || res.stdout || 'functy check produced no output');
+    out.show(true);
+    vscode.window.showErrorMessage('functy: could not parse check output.');
+    return;
+  }
+
+  // Replace the whole collection with the workspace-wide result.
+  diagnostics.clear();
+  const n = applyReport(report, folder.uri, diagnostics, cwd);
+  if (n === 0) {
+    vscode.window.showInformationMessage('functy: workspace check passed.');
+  } else {
+    vscode.window.showWarningMessage(
+      `functy: ${n} problem${n === 1 ? '' : 's'} found (see the Problems panel).`,
+    );
+  }
+}
+
+/** Format every .cty file under the workspace in place via `functy fmt -w`. */
+export async function formatWorkspace(): Promise<void> {
+  const folder = activeWorkspaceFolder();
+  if (!folder) {
+    vscode.window.showErrorMessage('functy: no workspace folder open.');
+    return;
+  }
+  const cwd = folder.uri.fsPath;
+  const out = outputChannel();
+  out.clear();
+  out.appendLine(`$ functy fmt -w . (in ${cwd})`);
+
+  let res;
+  try {
+    res = await runFuncty(['fmt', '-w', '.'], { cwd });
+  } catch (err) {
+    vscode.window.showErrorMessage(`functy: ${(err as Error).message}`);
+    return;
+  }
+
+  if (res.code === 0) {
+    vscode.window.showInformationMessage('functy: workspace formatted.');
+  } else {
+    out.appendLine(res.stderr.replace(/\n$/, ''));
+    out.show(true);
+    vscode.window.showErrorMessage('functy: format failed (see the functy output channel).');
+  }
 }

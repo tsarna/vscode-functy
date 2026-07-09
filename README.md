@@ -20,7 +20,10 @@ expressions. functy source files use the `.cty` extension.
   (`functy check`), with output in the *functy* output channel. Errors (including
   runtime errors) land in the Problems panel at their source location.
 - **Check on save** — `.cty` files are type-checked on save by default (a
-  side-effect-free `functy check`); toggle with **functy.checkOnSave**.
+  side-effect-free `functy check`); toggle with **functy.checkOnSave**. For live
+  checking as you type, enable **functy.checkOnType** (opt-in).
+- **Workspace** — **functy: Check Workspace** and **functy: Format Workspace**
+  commands, plus a `functy` task provider (check / test / fmt) for `tasks.json`.
 - **REPL** — **functy: Start REPL** opens `functy repl` with the active file
   loaded; **functy: Send Selection to REPL** (also on the editor context menu)
   sends the selection, or the current line, to the running REPL.
