@@ -24,8 +24,11 @@ regex/line-scan implementation, cheap and standalone, that the LSP will later im
 
 ## Near-term, no server needed (orthogonal to the LSP)
 
-- **Walkthrough (Get Started).** First-run guide: install functy, open a `.cty`, run / check /
-  test. Onboarding for the HCL/Terraform crowd new to functy.
+The originally-listed near-term items have all shipped (see `README.md` /
+`CHANGELOG.md`): Run/Check/Format, Evaluate Selection, Run with Arguments, REPL
+integration, the version check, task provider + workspace commands, continuous test
+run, the Outline provider, and the Get Started walkthrough. New non-LSP ideas land here
+as they come up; otherwise the next big investment is the LSP.
 
 ## Live diagnostics: why not a daemon (it's the LSP)
 

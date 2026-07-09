@@ -40,3 +40,5 @@ and test are read from stderr, leaving stdout free for `println()` output).
   check-on-save when enabled.
 - Continuous test run: the Test Explorer's Run profile supports continuous mode,
   re-running the affected tests when their `.cty` file is saved.
+- **Get Started walkthrough** and a **functy: Open Sample File** command that drops
+  a small example `.cty` into the workspace.

@@ -24,6 +24,8 @@ expressions. functy source files use the `.cty` extension.
   checking as you type, enable **functy.checkOnType** (opt-in).
 - **Workspace** — **functy: Check Workspace** and **functy: Format Workspace**
   commands, plus a `functy` task provider (check / test / fmt) for `tasks.json`.
+- **Get Started** — a walkthrough (Help → Welcome) and **functy: Open Sample File**
+  to try everything on a ready-made example.
 - **REPL** — **functy: Start REPL** opens `functy repl` with the active file
   loaded; **functy: Send Selection to REPL** (also on the editor context menu)
   sends the selection, or the current line, to the running REPL.

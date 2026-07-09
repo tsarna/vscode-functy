@@ -77,6 +77,49 @@
         }
       }
     ],
+    "walkthroughs": [
+      {
+        "id": "functyGetStarted",
+        "title": "Get Started with functy",
+        "description": "Install the CLI and explore functy (.cty) support: run, check, evaluate, and test.",
+        "steps": [
+          {
+            "id": "install",
+            "title": "Install the functy CLI",
+            "description": "This extension drives the `functy` binary (0.8.1+). Install it, put it on your PATH, or set the path.\n[Open functy.path Setting](command:workbench.action.openSettings?%5B%22functy.path%22%5D)",
+            "media": { "markdown": "walkthroughs/install.md" },
+            "completionEvents": ["onSettingChanged:functy.path"]
+          },
+          {
+            "id": "sample",
+            "title": "Open a sample file",
+            "description": "Drop a ready-made `.cty` example into your workspace to explore.\n[Open Sample](command:functy.openSample)",
+            "media": { "markdown": "walkthroughs/sample.md" },
+            "completionEvents": ["onCommand:functy.openSample"]
+          },
+          {
+            "id": "runcheck",
+            "title": "Run and check",
+            "description": "Run the entry function, or type-check the file.\n[Run File](command:functy.run) — [Check File](command:functy.check)",
+            "media": { "markdown": "walkthroughs/runcheck.md" },
+            "completionEvents": ["onCommand:functy.run", "onCommand:functy.check"]
+          },
+          {
+            "id": "evaluate",
+            "title": "Evaluate an expression",
+            "description": "Select an expression (e.g. `add(2, 3)`) and evaluate it inline.\n[Evaluate Selection](command:functy.evaluateSelection)",
+            "media": { "markdown": "walkthroughs/evaluate.md" },
+            "completionEvents": ["onCommand:functy.evaluateSelection"]
+          },
+          {
+            "id": "tests",
+            "title": "Run tests",
+            "description": "Open the Testing panel to run the file's `test` blocks.\n[Open Testing](command:workbench.view.testing.focus)",
+            "media": { "markdown": "walkthroughs/tests.md" }
+          }
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "functy.run",
@@ -111,6 +154,11 @@
       {
         "command": "functy.formatDocument",
         "title": "Format Document",
+        "category": "functy"
+      },
+      {
+        "command": "functy.openSample",
+        "title": "Open Sample File",
         "category": "functy"
       },
       {

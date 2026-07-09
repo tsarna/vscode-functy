@@ -12,6 +12,7 @@ import { checkOnSave, checkOnType } from './config';
 import { evaluateSelection, registerEvaluate } from './evaluate';
 import { formattingProvider } from './formatter';
 import { registerReplLifecycle, sendToRepl, startRepl } from './repl';
+import { openSample } from './sample';
 import { symbolProvider } from './symbols';
 import { registerTasks } from './tasks';
 import { createTestController } from './testController';
@@ -35,6 +36,7 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('functy.startRepl', () => startRepl()),
     vscode.commands.registerCommand('functy.sendToRepl', () => sendToRepl()),
+    vscode.commands.registerCommand('functy.openSample', () => openSample()),
     vscode.languages.registerDocumentFormattingEditProvider('functy', formattingProvider),
     vscode.languages.registerDocumentSymbolProvider('functy', symbolProvider),
   );
