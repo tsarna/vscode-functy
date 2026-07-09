@@ -24,10 +24,6 @@ regex/line-scan implementation, cheap and standalone, that the LSP will later im
 
 ## Near-term, no server needed (orthogonal to the LSP)
 
-- **Binary version check on activation.** Detect a missing or pre-`0.8.1` `functy` (the
-  floor for uniform-stderr `--json`) and warn once, with an install hint. Directly guards
-  the hard requirement the extension already depends on. Best paired with a functy
-  `version --json` (see *Dependencies* below); until then, parse `functy version` text.
 - **REPL integration.** "functy: Start REPL" opening an integrated terminal on
   `functy repl`, plus "Send Selection / Line to REPL." functy already ships the REPL; this
   is the interactive loop the audience will want, and it's the most *distinctive-to-functy*

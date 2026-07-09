@@ -4,6 +4,7 @@ import { checkOnSave } from './config';
 import { formattingProvider } from './formatter';
 import { symbolProvider } from './symbols';
 import { createTestController } from './testController';
+import { checkBinaryVersion } from './version';
 
 export function activate(context: vscode.ExtensionContext): void {
   const diagnostics = vscode.languages.createDiagnosticCollection('functy');
@@ -41,6 +42,16 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   createTestController(context);
+
+  // Verify the functy binary on startup, and again if its path is reconfigured.
+  void checkBinaryVersion();
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('functy.path')) {
+        void checkBinaryVersion();
+      }
+    }),
+  );
 }
 
 export function deactivate(): void {}

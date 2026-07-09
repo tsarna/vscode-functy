@@ -23,3 +23,5 @@ and test are read from stderr, leaving stdout free for `println()` output).
   clear when the file is edited so they never go stale.
 - Document symbols / Outline for `func`, `const`, `var`, `type`, and `test`
   declarations (comment/heredoc-aware, top-level only).
+- On activation (and when `functy.path` changes), warn if the functy binary is
+  missing or older than 0.8.1.
