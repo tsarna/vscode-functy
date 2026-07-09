@@ -80,8 +80,53 @@ function applyReport(
   return report.diagnostics.length;
 }
 
-/** Run the active document's entry function via `functy run --json`. */
-export async function runFile(diagnostics: vscode.DiagnosticCollection): Promise<void> {
+/**
+ * Split an argument string into argv tokens, respecting double-quoted spans (so
+ * an HCL string argument like `"hello world"` stays one token, quotes preserved
+ * because functy evaluates each argument as an HCL expression).
+ */
+export function tokenizeArgs(input: string): string[] {
+  const tokens: string[] = [];
+  let cur = '';
+  let inQuote = false;
+  let started = false;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (inQuote) {
+      if (ch === '\\' && i + 1 < input.length) {
+        cur += ch + input[++i];
+      } else {
+        cur += ch;
+        if (ch === '"') {
+          inQuote = false;
+        }
+      }
+    } else if (ch === '"') {
+      cur += ch;
+      inQuote = true;
+      started = true;
+    } else if (/\s/.test(ch)) {
+      if (started) {
+        tokens.push(cur);
+        cur = '';
+        started = false;
+      }
+    } else {
+      cur += ch;
+      started = true;
+    }
+  }
+  if (started) {
+    tokens.push(cur);
+  }
+  return tokens;
+}
+
+/** Run the active document via `functy run --json`, optionally with a chosen entry + args. */
+async function runProgram(
+  diagnostics: vscode.DiagnosticCollection,
+  opts: { func?: string; args?: string[] } = {},
+): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   if (!editor || editor.document.languageId !== 'functy') {
     vscode.window.showErrorMessage('functy: no active .cty file to run.');
@@ -91,17 +136,22 @@ export async function runFile(diagnostics: vscode.DiagnosticCollection): Promise
 
   const uri = editor.document.uri;
   const file = uri.fsPath;
-  const fn = runFunc();
+  const fn = opts.func ?? runFunc();
+  const args = ['run', '--func', fn, '--json', file];
+  if (opts.args && opts.args.length > 0) {
+    args.push('--', ...opts.args);
+  }
+
   const out = outputChannel();
   out.clear();
   out.show(true);
-  out.appendLine(`$ functy run --func ${fn} --json ${file}`);
+  out.appendLine(`$ functy ${args.join(' ')}`);
 
   let res;
   try {
     // With --json, the entry function's result + program output go to stdout;
     // any diagnostics go to stderr as a machine-readable report.
-    res = await runFuncty(['run', '--func', fn, '--json', file], { cwd: cwdFor(uri) });
+    res = await runFuncty(args, { cwd: cwdFor(uri) });
   } catch (err) {
     vscode.window.showErrorMessage(`functy: ${(err as Error).message}`);
     return;
@@ -128,6 +178,45 @@ export async function runFile(diagnostics: vscode.DiagnosticCollection): Promise
     }
     out.appendLine(`\n[exit ${res.code}]`);
   }
+}
+
+/** Run the active document's entry function via `functy run --json`. */
+export function runFile(diagnostics: vscode.DiagnosticCollection): Promise<void> {
+  return runProgram(diagnostics);
+}
+
+/** Prompt for an entry function and arguments, then run. */
+export async function runFileWithArgs(diagnostics: vscode.DiagnosticCollection): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || editor.document.languageId !== 'functy') {
+    vscode.window.showErrorMessage('functy: no active .cty file to run.');
+    return;
+  }
+
+  const func = await vscode.window.showInputBox({
+    title: 'functy: Run with Arguments (1/2)',
+    prompt: 'Entry function to call',
+    value: runFunc(),
+    ignoreFocusOut: true,
+  });
+  if (func === undefined) {
+    return; // cancelled
+  }
+
+  const argStr = await vscode.window.showInputBox({
+    title: 'functy: Run with Arguments (2/2)',
+    prompt: 'Arguments as HCL expressions, space-separated (e.g. 2 3 or "alice")',
+    placeHolder: '2 3',
+    ignoreFocusOut: true,
+  });
+  if (argStr === undefined) {
+    return; // cancelled
+  }
+
+  await runProgram(diagnostics, {
+    func: func.trim() || runFunc(),
+    args: tokenizeArgs(argStr),
+  });
 }
 
 /**

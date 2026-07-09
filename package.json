@@ -67,8 +67,18 @@
         "category": "functy"
       },
       {
+        "command": "functy.runWithArgs",
+        "title": "Run with Arguments…",
+        "category": "functy"
+      },
+      {
         "command": "functy.check",
         "title": "Check File",
+        "category": "functy"
+      },
+      {
+        "command": "functy.evaluateSelection",
+        "title": "Evaluate Selection",
         "category": "functy"
       },
       {
@@ -101,11 +111,19 @@
           "when": "resourceLangId == functy"
         },
         {
+          "command": "functy.runWithArgs",
+          "when": "resourceLangId == functy"
+        },
+        {
           "command": "functy.check",
           "when": "resourceLangId == functy"
         },
         {
           "command": "functy.formatDocument",
+          "when": "resourceLangId == functy"
+        },
+        {
+          "command": "functy.evaluateSelection",
           "when": "resourceLangId == functy"
         },
         {
@@ -115,9 +133,14 @@
       ],
       "editor/context": [
         {
+          "command": "functy.evaluateSelection",
+          "when": "resourceLangId == functy && editorHasSelection",
+          "group": "functy@1"
+        },
+        {
           "command": "functy.sendToRepl",
           "when": "resourceLangId == functy",
-          "group": "functy@1"
+          "group": "functy@2"
         }
       ]
     },

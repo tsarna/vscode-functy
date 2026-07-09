@@ -28,3 +28,7 @@ and test are read from stderr, leaving stdout free for `println()` output).
 - REPL integration: **functy: Start REPL** (opens `functy repl`, loading the
   active file) and **functy: Send Selection to REPL** (sends the selection, or
   the current line, to the REPL).
+- **functy: Evaluate Selection** — evaluate the selection (or current line) via
+  `functy eval` and show the result inline and in the output channel.
+- **functy: Run with Arguments…** — prompt for an entry function and arguments,
+  then run.

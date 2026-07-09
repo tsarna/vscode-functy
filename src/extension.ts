@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { checkDocument, checkFile, runFile } from './commands';
+import { checkDocument, checkFile, runFile, runFileWithArgs } from './commands';
 import { checkOnSave } from './config';
+import { evaluateSelection, registerEvaluate } from './evaluate';
 import { formattingProvider } from './formatter';
 import { registerReplLifecycle, sendToRepl, startRepl } from './repl';
 import { symbolProvider } from './symbols';
@@ -13,7 +14,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('functy.run', () => runFile(diagnostics)),
+    vscode.commands.registerCommand('functy.runWithArgs', () => runFileWithArgs(diagnostics)),
     vscode.commands.registerCommand('functy.check', () => checkFile(diagnostics)),
+    vscode.commands.registerCommand('functy.evaluateSelection', () => evaluateSelection()),
     vscode.commands.registerCommand('functy.formatDocument', () =>
       vscode.commands.executeCommand('editor.action.formatDocument'),
     ),
@@ -23,6 +26,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.languages.registerDocumentSymbolProvider('functy', symbolProvider),
   );
   registerReplLifecycle(context);
+  registerEvaluate(context);
 
   // Diagnostics from check/run are computed one-shot and become stale as soon as
   // the text changes (their ranges no longer line up). Clear them on edit; a fresh

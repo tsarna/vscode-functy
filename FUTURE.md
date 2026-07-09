@@ -24,12 +24,6 @@ regex/line-scan implementation, cheap and standalone, that the LSP will later im
 
 ## Near-term, no server needed (orthogonal to the LSP)
 
-- **Evaluate Selection.** Run a highlighted expression and show the result (inline decoration
-  or output channel), via `functy run`/repl one-shot. Cheap, and natural where everything is
-  a value.
-- **Run with Arguments.** The Run command currently uses a fixed entry function and passes
-  no args; functy supports `-- ARG…`. A prompt (or a lightweight per-file "run config")
-  closes the gap.
 - **Task provider + workspace commands.** Contribute VSCode Tasks for `functy check` /
   `test` / `fmt -w` across the workspace ("Check Workspace", "Format Workspace"), so CI-style
   actions are one command away.

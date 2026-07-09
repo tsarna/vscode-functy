@@ -24,6 +24,10 @@ expressions. functy source files use the `.cty` extension.
 - **REPL** — **functy: Start REPL** opens `functy repl` with the active file
   loaded; **functy: Send Selection to REPL** (also on the editor context menu)
   sends the selection, or the current line, to the running REPL.
+- **Evaluate Selection** — **functy: Evaluate Selection** evaluates the selection
+  (or current line) via `functy eval` and shows the result inline.
+- **Run with Arguments** — **functy: Run with Arguments…** prompts for an entry
+  function and arguments, then runs.
 - **Formatting** — Format Document / format-on-save backed by `functy fmt`.
 - **Testing** — co-located `test "…" { … }` blocks appear in the native Test
   Explorer, run via `functy test --json`. `println()` output and per-test results
