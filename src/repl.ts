@@ -21,13 +21,20 @@ function dq(s: string): string {
 
 /**
  * Get the existing REPL terminal, or create one running `functy repl [file]`.
- * The terminal is a normal shell so PATH resolves `functy` and the shell remains
- * usable after the REPL exits.
+ * The command runs in a shell (so PATH resolves `functy`), but on POSIX it is
+ * `exec`'d so the shell is replaced by the REPL and the terminal ends when the
+ * REPL exits rather than dropping the user at a leftover prompt.
  */
 function ensureRepl(loadFile?: vscode.Uri): vscode.Terminal {
-  if (replTerminal) {
+  // Reuse only a live REPL; if its process already exited, start fresh.
+  if (replTerminal && replTerminal.exitStatus === undefined) {
     return replTerminal;
   }
+  if (replTerminal) {
+    replTerminal.dispose();
+    replTerminal = undefined;
+  }
+
   const term = vscode.window.createTerminal({
     name: 'functy REPL',
     cwd: loadFile?.scheme === 'file' ? cwdFor(loadFile) : undefined,
@@ -38,7 +45,8 @@ function ensureRepl(loadFile?: vscode.Uri): vscode.Terminal {
   if (loadFile?.scheme === 'file') {
     cmd += ` ${dq(loadFile.fsPath)}`;
   }
-  term.sendText(cmd);
+  // `exec` (POSIX) replaces the shell so the terminal closes with the REPL.
+  term.sendText(process.platform === 'win32' ? cmd : `exec ${cmd}`);
   return term;
 }
 
