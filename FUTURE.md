@@ -24,10 +24,6 @@ regex/line-scan implementation, cheap and standalone, that the LSP will later im
 
 ## Near-term, no server needed (orthogonal to the LSP)
 
-- **REPL integration.** "functy: Start REPL" opening an integrated terminal on
-  `functy repl`, plus "Send Selection / Line to REPL." functy already ships the REPL; this
-  is the interactive loop the audience will want, and it's the most *distinctive-to-functy*
-  feature — a value-oriented language rewards a live eval loop.
 - **Evaluate Selection.** Run a highlighted expression and show the result (inline decoration
   or output channel), via `functy run`/repl one-shot. Cheap, and natural where everything is
   a value.

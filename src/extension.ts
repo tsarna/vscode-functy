@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { checkDocument, checkFile, runFile } from './commands';
 import { checkOnSave } from './config';
 import { formattingProvider } from './formatter';
+import { registerReplLifecycle, sendToRepl, startRepl } from './repl';
 import { symbolProvider } from './symbols';
 import { createTestController } from './testController';
 import { checkBinaryVersion } from './version';
@@ -16,9 +17,12 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('functy.formatDocument', () =>
       vscode.commands.executeCommand('editor.action.formatDocument'),
     ),
+    vscode.commands.registerCommand('functy.startRepl', () => startRepl()),
+    vscode.commands.registerCommand('functy.sendToRepl', () => sendToRepl()),
     vscode.languages.registerDocumentFormattingEditProvider('functy', formattingProvider),
     vscode.languages.registerDocumentSymbolProvider('functy', symbolProvider),
   );
+  registerReplLifecycle(context);
 
   // Diagnostics from check/run are computed one-shot and become stale as soon as
   // the text changes (their ranges no longer line up). Clear them on edit; a fresh

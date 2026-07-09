@@ -25,3 +25,6 @@ and test are read from stderr, leaving stdout free for `println()` output).
   declarations (comment/heredoc-aware, top-level only).
 - On activation (and when `functy.path` changes), warn if the functy binary is
   missing or older than 0.8.1.
+- REPL integration: **functy: Start REPL** (opens `functy repl`, loading the
+  active file) and **functy: Send Selection to REPL** (sends the selection, or
+  the current line, to the REPL).

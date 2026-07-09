@@ -75,6 +75,16 @@
         "command": "functy.formatDocument",
         "title": "Format Document",
         "category": "functy"
+      },
+      {
+        "command": "functy.startRepl",
+        "title": "Start REPL",
+        "category": "functy"
+      },
+      {
+        "command": "functy.sendToRepl",
+        "title": "Send Selection to REPL",
+        "category": "functy"
       }
     ],
     "menus": {
@@ -97,6 +107,17 @@
         {
           "command": "functy.formatDocument",
           "when": "resourceLangId == functy"
+        },
+        {
+          "command": "functy.sendToRepl",
+          "when": "resourceLangId == functy"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "functy.sendToRepl",
+          "when": "resourceLangId == functy",
+          "group": "functy@1"
         }
       ]
     },
