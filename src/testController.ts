@@ -225,7 +225,7 @@ export function createTestController(context: vscode.ExtensionContext): vscode.T
     watcher.onDidDelete((uri) => controller.items.delete(uri.toString())),
   );
 
-  async function runHandler(
+  async function runRequest(
     request: vscode.TestRunRequest,
     token: vscode.CancellationToken,
   ): Promise<void> {
@@ -350,7 +350,64 @@ export function createTestController(context: vscode.ExtensionContext): vscode.T
     run.end();
   }
 
-  controller.createRunProfile('Run', vscode.TestRunProfileKind.Run, runHandler, true);
+  /**
+   * Dispatch a run: a normal one-shot, or — for a continuous run — re-run the
+   * affected tests whenever a `.cty` file is saved, until the run is cancelled.
+   * `functy test` reads files from disk, so watching disk changes (saves) is the
+   * correct trigger, and per-file test runs mean a file's own change is enough.
+   */
+  async function runHandler(
+    request: vscode.TestRunRequest,
+    token: vscode.CancellationToken,
+  ): Promise<void> {
+    if (!request.continuous) {
+      await runRequest(request, token);
+      return;
+    }
+
+    const wanted = request.include ? new Set(request.include.map((i) => i.id)) : undefined;
+    const watcher = vscode.workspace.createFileSystemWatcher('**/*.cty');
+
+    const onChange = async (uri: vscode.Uri) => {
+      if (token.isCancellationRequested) {
+        return;
+      }
+      // Refresh discovery for the changed file, then re-run its tests.
+      const open = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
+      if (open) {
+        discoverInText(uri, open.getText());
+      } else {
+        await discoverInFile(uri);
+      }
+      const fileNode = controller.items.get(uri.toString());
+      if (!fileNode) {
+        return;
+      }
+      const items: vscode.TestItem[] = [];
+      fileNode.children.forEach((c) => {
+        if (!wanted || wanted.has(c.id) || wanted.has(fileNode.id)) {
+          items.push(c);
+        }
+      });
+      if (items.length > 0) {
+        await runRequest(new vscode.TestRunRequest(items, request.exclude, request.profile), token);
+      }
+    };
+
+    watcher.onDidChange(onChange);
+    watcher.onDidCreate(onChange);
+    token.onCancellationRequested(() => watcher.dispose());
+    context.subscriptions.push(watcher);
+  }
+
+  controller.createRunProfile(
+    'Run',
+    vscode.TestRunProfileKind.Run,
+    runHandler,
+    true,
+    undefined,
+    true, // supportsContinuousRun
+  );
 
   return controller;
 }

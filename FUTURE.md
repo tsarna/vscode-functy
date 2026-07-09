@@ -24,8 +24,6 @@ regex/line-scan implementation, cheap and standalone, that the LSP will later im
 
 ## Near-term, no server needed (orthogonal to the LSP)
 
-- **Continuous test run.** A `TestRunProfile` with `supportsContinuousRun` to re-run tests on
-  save. Small, and a nice complement to the existing Test Explorer.
 - **Walkthrough (Get Started).** First-run guide: install functy, open a `.cty`, run / check /
   test. Onboarding for the HCL/Terraform crowd new to functy.
 

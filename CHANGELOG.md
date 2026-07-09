@@ -38,3 +38,5 @@ and test are read from stderr, leaving stdout free for `println()` output).
 - **functy.checkOnType** (opt-in, default off) — live type-checking of the
   unsaved buffer as you type, via `functy check --json -`. Supersedes
   check-on-save when enabled.
+- Continuous test run: the Test Explorer's Run profile supports continuous mode,
+  re-running the affected tests when their `.cty` file is saved.

@@ -34,7 +34,8 @@ expressions. functy source files use the `.cty` extension.
 - **Formatting** — Format Document / format-on-save backed by `functy fmt`.
 - **Testing** — co-located `test "…" { … }` blocks appear in the native Test
   Explorer, run via `functy test --json`. `println()` output and per-test results
-  show in the Test Results view; a running test can be cancelled.
+  show in the Test Results view; a running test can be cancelled. Continuous run
+  re-runs the affected tests when their file is saved.
 
 ## Requirements
 
