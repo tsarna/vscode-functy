@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { checkDocument, checkFile, runFile } from './commands';
 import { checkOnSave } from './config';
 import { formattingProvider } from './formatter';
+import { symbolProvider } from './symbols';
 import { createTestController } from './testController';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -15,6 +16,7 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.commands.executeCommand('editor.action.formatDocument'),
     ),
     vscode.languages.registerDocumentFormattingEditProvider('functy', formattingProvider),
+    vscode.languages.registerDocumentSymbolProvider('functy', symbolProvider),
   );
 
   // Diagnostics from check/run are computed one-shot and become stale as soon as

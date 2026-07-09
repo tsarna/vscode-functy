@@ -12,6 +12,8 @@ expressions. functy source files use the `.cty` extension.
   `%{}` interpolation, heredocs, numbers, operators, and function calls).
 - **Editing** — `//` and `#` line comments, `/* */` block comments, bracket
   matching, auto-closing pairs, and indentation.
+- **Outline** — `func`, `const`, `var`, `type`, and `test` declarations appear in
+  the Outline view, breadcrumbs, sticky scroll, and "Go to Symbol" (⇧⌘O).
 - **Snippets** — `func`, `funcret`, `if`, `ifelse`, `forin`, `forc`, `while`,
   `switch`, `trycatch`, `test`, `var`, `const`, `type`.
 - **Commands** — **functy: Run File** (`functy run`) and **functy: Check File**

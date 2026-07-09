@@ -21,3 +21,5 @@ and test are read from stderr, leaving stdout free for `println()` output).
   line.
 - Type-check on save (`functy.checkOnSave`, default on); check/run diagnostics
   clear when the file is edited so they never go stale.
+- Document symbols / Outline for `func`, `const`, `var`, `type`, and `test`
+  declarations (comment/heredoc-aware, top-level only).
