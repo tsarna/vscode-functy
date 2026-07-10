@@ -1,30 +1,11 @@
 import * as vscode from 'vscode';
 import { functyPath, runFuncty } from './config';
+import { compareVersions, coreVersion } from './protocol';
 
 /** Minimum functy version this extension requires (the 0.9.x editor-tooling CLIs). */
 export const MIN_VERSION = '0.9.0';
 
 const REPO_URL = 'https://github.com/tsarna/functy';
-
-/** Extract the `x.y.z` core from a version string (dropping any `-rc.N` suffix). */
-function coreVersion(v: string): string | null {
-  const m = /(\d+\.\d+\.\d+)/.exec(v);
-  return m ? m[1] : null;
-}
-
-/** Compare dotted numeric versions: -1 if a < b, 0 if equal, 1 if a > b. */
-export function compareVersions(a: string, b: string): number {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    const x = pa[i] ?? 0;
-    const y = pb[i] ?? 0;
-    if (x !== y) {
-      return x < y ? -1 : 1;
-    }
-  }
-  return 0;
-}
 
 function warnUpdate(found?: string): void {
   const detail = found ? `, but found ${found}` : '';

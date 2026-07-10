@@ -1,36 +1,9 @@
 import * as vscode from 'vscode';
 import { cwdFor, runFuncty } from './config';
+import { FunctySymbol, parseSymbols } from './protocol';
 
-/** A 1-based source range, as emitted by functy's `--json` reports. */
-export interface JsonRange {
-  file: string;
-  line: number;
-  column: number;
-  end_line: number;
-  end_column: number;
-}
-
-/** One symbol from `functy symbols --json`. */
-export interface FunctySymbol {
-  kind: 'func' | 'const' | 'var' | 'type' | 'test';
-  name: string;
-  detail?: string;
-  doc?: string;
-  range: JsonRange;
-}
-
-interface SymbolsReport {
-  symbols: FunctySymbol[];
-}
-
-function parse(stdout: string): FunctySymbol[] {
-  try {
-    const rep = JSON.parse(stdout) as SymbolsReport;
-    return Array.isArray(rep.symbols) ? rep.symbols : [];
-  } catch {
-    return [];
-  }
-}
+// Re-exported so existing importers can keep sourcing these from symbolsClient.
+export type { FunctySymbol, JsonRange } from './protocol';
 
 /**
  * Symbols for a single document, checked from its (possibly unsaved) buffer via
@@ -47,7 +20,7 @@ export async function symbolsForDocument(
       cwd: cwdFor(uri),
       stdin: document.getText(),
     });
-    return parse(res.stdout);
+    return parseSymbols(res.stdout);
   } catch {
     return [];
   }
@@ -61,7 +34,7 @@ export async function symbolsForDocument(
 export async function symbolsForPath(cwd: string, pathArg: string): Promise<FunctySymbol[]> {
   try {
     const res = await runFuncty(['symbols', '--json', pathArg], { cwd });
-    return parse(res.stdout);
+    return parseSymbols(res.stdout);
   } catch {
     return [];
   }

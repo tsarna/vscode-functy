@@ -1,49 +1,24 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { cwdFor, outputChannel, runFunc, runFuncty } from './config';
+import {
+  JsonDiagnostic,
+  JsonDiagnostics,
+  JsonRange,
+  parseDiagnostics,
+  tokenizeArgs,
+  zeroBased,
+} from './protocol';
 
-/** A 1-based source range, as emitted by functy's `--json` reports. */
-interface JsonRange {
-  file: string;
-  line: number;
-  column: number;
-  end_line: number;
-  end_column: number;
-}
-
-/** One entry of a functy `--json` diagnostics report (check / run). */
-interface JsonDiagnostic {
-  severity: 'error' | 'warning';
-  summary: string;
-  detail?: string;
-  location?: JsonRange;
-}
-
-interface JsonDiagnostics {
-  diagnostics: JsonDiagnostic[];
-}
+export { tokenizeArgs };
 
 /** Convert a 1-based functy range to a 0-based vscode.Range (start of file if absent). */
 function rangeFrom(loc: JsonRange | undefined): vscode.Range {
   if (!loc) {
     return new vscode.Range(0, 0, 0, 0);
   }
-  return new vscode.Range(
-    Math.max(0, loc.line - 1),
-    Math.max(0, loc.column - 1),
-    Math.max(0, loc.end_line - 1),
-    Math.max(0, loc.end_column - 1),
-  );
-}
-
-/** Parse a functy `--json` diagnostics report; null if the text isn't a valid report. */
-function parseReport(text: string): JsonDiagnostics | null {
-  try {
-    const parsed = JSON.parse(text) as JsonDiagnostics;
-    return Array.isArray(parsed.diagnostics) ? parsed : null;
-  } catch {
-    return null;
-  }
+  const z = zeroBased(loc);
+  return new vscode.Range(z.line, z.column, z.endLine, z.endColumn);
 }
 
 /** Build a vscode.Diagnostic from a functy report entry. */
@@ -102,48 +77,6 @@ function activeWorkspaceFolder(): vscode.WorkspaceFolder | undefined {
   return vscode.workspace.workspaceFolders?.[0];
 }
 
-/**
- * Split an argument string into argv tokens, respecting double-quoted spans (so
- * an HCL string argument like `"hello world"` stays one token, quotes preserved
- * because functy evaluates each argument as an HCL expression).
- */
-export function tokenizeArgs(input: string): string[] {
-  const tokens: string[] = [];
-  let cur = '';
-  let inQuote = false;
-  let started = false;
-  for (let i = 0; i < input.length; i++) {
-    const ch = input[i];
-    if (inQuote) {
-      if (ch === '\\' && i + 1 < input.length) {
-        cur += ch + input[++i];
-      } else {
-        cur += ch;
-        if (ch === '"') {
-          inQuote = false;
-        }
-      }
-    } else if (ch === '"') {
-      cur += ch;
-      inQuote = true;
-      started = true;
-    } else if (/\s/.test(ch)) {
-      if (started) {
-        tokens.push(cur);
-        cur = '';
-        started = false;
-      }
-    } else {
-      cur += ch;
-      started = true;
-    }
-  }
-  if (started) {
-    tokens.push(cur);
-  }
-  return tokens;
-}
-
 /** Run the active document via `functy run --json`, optionally with a chosen entry + args. */
 async function runProgram(
   diagnostics: vscode.DiagnosticCollection,
@@ -189,7 +122,7 @@ async function runProgram(
     return;
   }
 
-  const report = parseReport(res.stderr);
+  const report = parseDiagnostics(res.stderr);
   if (report) {
     const n = applyReport(report, uri, diagnostics);
     out.appendLine(`\n[exit ${res.code}] — ${n} diagnostic${n === 1 ? '' : 's'} (see Problems)`);
@@ -262,7 +195,7 @@ export async function checkDocument(
   }
 
   // The --json report goes to stderr (consistent across check/test/run in functy 0.8.1+).
-  const report = parseReport(res.stderr);
+  const report = parseDiagnostics(res.stderr);
   if (!report) {
     if (opts.silent) {
       return;
@@ -313,7 +246,7 @@ export async function checkBuffer(
   } catch {
     return;
   }
-  const report = parseReport(res.stderr);
+  const report = parseDiagnostics(res.stderr);
   if (report) {
     applyReport(report, uri, diagnostics);
   }
@@ -339,7 +272,7 @@ export async function checkWorkspace(diagnostics: vscode.DiagnosticCollection): 
     return;
   }
 
-  const report = parseReport(res.stderr);
+  const report = parseDiagnostics(res.stderr);
   if (!report) {
     out.appendLine(res.stderr || res.stdout || 'functy check produced no output');
     out.show(true);

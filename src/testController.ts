@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { cwdFor, runFuncty } from './config';
+import { escapeRegex, JsonRange, zeroBased } from './protocol';
 import { symbolsForDocument, symbolsForPath } from './symbolsClient';
 
 /** Shape of `functy test --json` output. */
@@ -25,28 +26,13 @@ interface JsonTest {
     location?: JsonRange;
   };
 }
-interface JsonRange {
-  file: string;
-  line: number;
-  column: number;
-  end_line: number;
-  end_column: number;
-}
-
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 function rangeFrom(loc: JsonRange | undefined): vscode.Range | undefined {
   if (!loc) {
     return undefined;
   }
-  return new vscode.Range(
-    Math.max(0, loc.line - 1),
-    Math.max(0, loc.column - 1),
-    Math.max(0, loc.end_line - 1),
-    Math.max(0, loc.end_column - 1),
-  );
+  const z = zeroBased(loc);
+  return new vscode.Range(z.line, z.column, z.endLine, z.endColumn);
 }
 
 export function createTestController(context: vscode.ExtensionContext): vscode.TestController {
@@ -77,8 +63,8 @@ export function createTestController(context: vscode.ExtensionContext): vscode.T
     const file = fileItem(uri);
     const seen = new Set<string>();
     for (const t of tests) {
-      const line = Math.max(0, t.range.line - 1);
-      const id = `${uri.toString()}::${line}:${t.name}`;
+      const z = zeroBased(t.range);
+      const id = `${uri.toString()}::${z.line}:${t.name}`;
       let item = file.children.get(id);
       if (!item) {
         item = controller.createTestItem(id, t.name, uri);
@@ -86,12 +72,7 @@ export function createTestController(context: vscode.ExtensionContext): vscode.T
       } else {
         item.label = t.name;
       }
-      item.range = new vscode.Range(
-        line,
-        Math.max(0, t.range.column - 1),
-        Math.max(0, t.range.end_line - 1),
-        Math.max(0, t.range.end_column - 1),
-      );
+      item.range = new vscode.Range(z.line, z.column, z.endLine, z.endColumn);
       seen.add(id);
     }
     const stale: string[] = [];

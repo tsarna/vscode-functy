@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { FunctySymbol, JsonRange, symbolsForDocument } from './symbolsClient';
+import { FunctySymbol, JsonRange, zeroBased } from './protocol';
+import { symbolsForDocument } from './symbolsClient';
 
 const KIND: Record<FunctySymbol['kind'], vscode.SymbolKind> = {
   func: vscode.SymbolKind.Function,
@@ -11,12 +12,8 @@ const KIND: Record<FunctySymbol['kind'], vscode.SymbolKind> = {
 
 /** Convert a 1-based functy range to a 0-based vscode.Range. */
 function toRange(r: JsonRange): vscode.Range {
-  return new vscode.Range(
-    Math.max(0, r.line - 1),
-    Math.max(0, r.column - 1),
-    Math.max(0, r.end_line - 1),
-    Math.max(0, r.end_column - 1),
-  );
+  const z = zeroBased(r);
+  return new vscode.Range(z.line, z.column, z.endLine, z.endColumn);
 }
 
 /**
