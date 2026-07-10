@@ -41,10 +41,10 @@ expressions. functy source files use the `.cty` extension.
 
 ## Requirements
 
-The extension shells out to the `functy` binary, and requires **functy 0.8.1 or
-newer** (it relies on the `--json` reports for check, run, and test all being
-emitted to stderr). It warns on startup if the binary is missing or too old.
-Install it with:
+The extension shells out to the `functy` binary, and requires **functy 0.9.0 or
+newer** (it relies on `eval`, `symbols`, `check --json -`, and the `--json`
+reports). It warns on startup if the binary is missing or too old. Install it
+with:
 
 ```
 go install github.com/tsarna/functy/cmd/functy@latest

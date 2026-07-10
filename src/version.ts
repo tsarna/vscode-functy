@@ -1,23 +1,14 @@
 import * as vscode from 'vscode';
 import { functyPath, runFuncty } from './config';
 
-/** Minimum functy version this extension requires (uniform-stderr `--json`). */
-export const MIN_VERSION = '0.8.1';
+/** Minimum functy version this extension requires (the 0.9.x editor-tooling CLIs). */
+export const MIN_VERSION = '0.9.0';
 
 const REPO_URL = 'https://github.com/tsarna/functy';
 
-/**
- * Extract the `x.y.z` version from `functy version` output (first line is
- * `functy <version>`). Returns null for a source build (`functy dev`) or any
- * output we can't parse — callers treat null as "don't warn".
- *
- * Deliberately parses the plain-text output rather than a `--json` form: this
- * check exists to catch *old* binaries, and any `--json` flag postdates the
- * versions it must detect, so the lowest-common-denominator text is the only
- * format guaranteed to be present.
- */
-export function parseVersion(output: string): string | null {
-  const m = /^functy\s+v?(\d+\.\d+\.\d+)/m.exec(output);
+/** Extract the `x.y.z` core from a version string (dropping any `-rc.N` suffix). */
+function coreVersion(v: string): string | null {
+  const m = /(\d+\.\d+\.\d+)/.exec(v);
   return m ? m[1] : null;
 }
 
@@ -35,15 +26,30 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
+function warnUpdate(found?: string): void {
+  const detail = found ? `, but found ${found}` : '';
+  void vscode.window
+    .showWarningMessage(
+      `functy: this extension needs functy ${MIN_VERSION} or newer${detail}. ` +
+        `Update it (go install github.com/tsarna/functy/cmd/functy@latest) or set 'functy.path'.`,
+      'Open functy on GitHub',
+    )
+    .then((pick) => {
+      if (pick === 'Open functy on GitHub') {
+        void vscode.env.openExternal(vscode.Uri.parse(REPO_URL));
+      }
+    });
+}
+
 /**
  * Check the configured functy binary on activation (and when `functy.path`
- * changes). Warns once if it's missing or older than {@link MIN_VERSION}; stays
- * silent for a matching version or an unparseable/dev build. Never throws.
+ * changes) via `functy version --json`. Warns if it's missing, too old to have
+ * that flag, or older than {@link MIN_VERSION}. Never throws.
  */
 export async function checkBinaryVersion(): Promise<void> {
   let res;
   try {
-    res = await runFuncty(['version']);
+    res = await runFuncty(['version', '--json']);
   } catch {
     const pick = await vscode.window.showWarningMessage(
       `functy: could not find the '${functyPath()}' binary. Install functy ${MIN_VERSION} or newer ` +
@@ -60,17 +66,21 @@ export async function checkBinaryVersion(): Promise<void> {
     return;
   }
 
-  // A binary too old to have the `version` subcommand (exit != 0) or a dev build
-  // (unparseable) is left alone — a false "too old" warning is worse than silence.
-  const version = res.code === 0 ? parseVersion(res.stdout) : null;
+  // A non-zero exit means the binary is too old to have `version --json`
+  // (predates 0.9.0), so it lacks the CLIs this extension relies on.
+  if (res.code !== 0) {
+    warnUpdate();
+    return;
+  }
+
+  let version: string | null = null;
+  try {
+    const info = JSON.parse(res.stdout) as { version?: string };
+    version = info.version ? coreVersion(info.version) : null;
+  } catch {
+    /* unparseable — leave null, don't nag on a dev build */
+  }
   if (version && compareVersions(version, MIN_VERSION) < 0) {
-    const pick = await vscode.window.showWarningMessage(
-      `functy: this extension needs functy ${MIN_VERSION} or newer, but found ${version}. ` +
-        `Upgrade to get reliable diagnostics and test results.`,
-      'Open functy on GitHub',
-    );
-    if (pick === 'Open functy on GitHub') {
-      void vscode.env.openExternal(vscode.Uri.parse(REPO_URL));
-    }
+    warnUpdate(version);
   }
 }
