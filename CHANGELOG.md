@@ -42,7 +42,7 @@ and test are read from stderr, leaving stdout free for `println()` output).
   re-running the affected tests when their `.cty` file is saved.
 - **Get Started walkthrough** and a **functy: Open Sample File** command that drops
   a small example `.cty` into the workspace.
-- Outline and test discovery are now backed by `functy symbols --json` (authoritative
+- Outline and test discovery are now backed by `functy symbols` (authoritative
   parser output) instead of regex scanners: correct signatures and ranges, duplicate
   test names are distinct items, and the formatter shows a hint when a file doesn't
   parse. Requires functy with the `symbols` command.

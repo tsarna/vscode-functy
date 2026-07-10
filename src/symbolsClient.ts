@@ -43,7 +43,8 @@ export async function symbolsForDocument(
   const uri = document.uri;
   const filename = uri.scheme === 'file' ? uri.fsPath : 'buffer.cty';
   try {
-    const res = await runFuncty(['symbols', '--json', '-', '--filename', filename], {
+    // `symbols` is JSON-only (no --json flag); it reads stdin via `-`.
+    const res = await runFuncty(['symbols', '-', '--filename', filename], {
       cwd: cwdFor(uri),
       stdin: document.getText(),
     });
@@ -60,7 +61,7 @@ export async function symbolsForDocument(
  */
 export async function symbolsForPath(cwd: string, pathArg: string): Promise<FunctySymbol[]> {
   try {
-    const res = await runFuncty(['symbols', '--json', pathArg], { cwd });
+    const res = await runFuncty(['symbols', pathArg], { cwd });
     return parse(res.stdout);
   } catch {
     return [];

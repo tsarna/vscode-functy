@@ -114,7 +114,7 @@ Shipped and adopted:
 
 Also shipped and adopted:
 
-- **`functy symbols --json`** — backs both the **Outline** (`src/symbols.ts`) and **test
+- **`functy symbols`** — backs both the **Outline** (`src/symbols.ts`) and **test
   discovery** (`src/testController.ts`) via `src/symbolsClient.ts`, replacing the former regex
   scanners with authoritative parser output (correct names, ranges, signatures, doc comments,
   and comment/heredoc handling for free). The parser's error recovery keeps it working mid-edit
@@ -131,10 +131,6 @@ Still wanted:
 
 Small correctness/UX items:
 
-- **Duplicate test descriptions** — *fixed*: test item IDs now embed the source line (from
-  `symbols --json`), so two `test "same name"` blocks are distinct items.
-- **Test discovery brace-on-next-line / string edge cases** — *retired*: discovery is now
-  parser-driven (`symbols --json`), not a line scanner.
 - **Formatter silent no-op on a parse error** — *fixed*: shows a brief status-bar hint.
 - **`functy.path` must be a bare executable** — a value with arguments (e.g. `go run …`) breaks
   `spawn`; documented in the setting description, and a bad value surfaces as the version
