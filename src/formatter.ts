@@ -22,7 +22,9 @@ export const formattingProvider: vscode.DocumentFormattingEditProvider = {
     }
 
     if (res.code !== 0 || res.stdout.length === 0) {
-      // Parse error (or empty output) — do not touch the document.
+      // Parse error (or empty output) — do not touch the document, but hint why
+      // nothing happened (a silent no-op reads as "format is broken").
+      vscode.window.setStatusBarMessage('functy: not formatted — the file does not parse', 4000);
       return [];
     }
 

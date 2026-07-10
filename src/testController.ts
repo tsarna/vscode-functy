@@ -1,5 +1,7 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { cwdFor, runFuncty } from './config';
+import { symbolsForDocument, symbolsForPath } from './symbolsClient';
 
 /** Shape of `functy test --json` output. */
 interface JsonReport {
@@ -31,43 +33,8 @@ interface JsonRange {
   end_column: number;
 }
 
-/**
- * Matches a `test "<description>"` declaration at the start of a line, capturing
- * the (possibly escaped) description. The opening brace may be on this line or a
- * following one, so it is not required here.
- */
-const TEST_RE = /^[ \t]*test[ \t]+"((?:[^"\\]|\\.)*)"/;
-/** A line whose first non-space is a `//` or `#` line comment. */
-const LINE_COMMENT_RE = /^[ \t]*(\/\/|#)/;
-/** Opens a heredoc: `<<TAG` or `<<-TAG`, capturing the terminator tag. */
-const HEREDOC_OPEN_RE = /<<-?([A-Za-z_]\w*)/;
-
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/** Drop a trailing `//` or `#` line comment (best-effort; ignores strings). */
-function stripLineComment(line: string): string {
-  const slash = line.indexOf('//');
-  const hash = line.indexOf('#');
-  const idx = [slash, hash].filter((n) => n >= 0).sort((a, b) => a - b)[0];
-  return idx === undefined ? line : line.slice(0, idx);
-}
-
-/** Decode a functy/HCL double-quoted string body (handles common escapes). */
-function unescape(s: string): string {
-  return s.replace(/\\(["\\nrt])/g, (_m, c) => {
-    switch (c) {
-      case 'n':
-        return '\n';
-      case 'r':
-        return '\r';
-      case 't':
-        return '\t';
-      default:
-        return c;
-    }
-  });
 }
 
 function rangeFrom(loc: JsonRange | undefined): vscode.Range | undefined {
@@ -99,66 +66,34 @@ export function createTestController(context: vscode.ExtensionContext): vscode.T
   }
 
   /**
-   * (Re)discover the `test "…"` blocks in a document's text. Scans line by line,
-   * tracking block-comment and heredoc regions so a `test "…"` inside a comment
-   * or a heredoc/string body is not mistaken for a real declaration.
+   * Sync a file's TestItems from its `test` symbols (from `functy symbols`). IDs
+   * embed the line so two tests with the same description don't collapse into one.
    */
-  function discoverInText(uri: vscode.Uri, text: string): void {
+  function updateFileTests(uri: vscode.Uri, tests: { name: string; range: JsonRange }[]): void {
+    if (tests.length === 0) {
+      controller.items.delete(uri.toString());
+      return;
+    }
     const file = fileItem(uri);
     const seen = new Set<string>();
-    const lines = text.split(/\r?\n/);
-
-    let inBlockComment = false;
-    let heredocTag: string | null = null;
-
-    for (let i = 0; i < lines.length; i++) {
-      let line = lines[i];
-
-      if (heredocTag) {
-        if (new RegExp(`^[ \\t]*${heredocTag}[ \\t]*$`).test(line)) {
-          heredocTag = null;
-        }
-        continue;
-      }
-      if (inBlockComment) {
-        const end = line.indexOf('*/');
-        if (end < 0) {
-          continue;
-        }
-        // Blank out everything up to and including the close so the rest is scanned.
-        line = ' '.repeat(end + 2) + line.slice(end + 2);
-        inBlockComment = false;
-      }
-
-      const m = LINE_COMMENT_RE.test(line) ? null : TEST_RE.exec(line);
-      if (m) {
-        const name = unescape(m[1]);
-        const id = `${uri.toString()}::${name}`;
-        let test = file.children.get(id);
-        if (!test) {
-          test = controller.createTestItem(id, name, uri);
-          file.children.add(test);
-        }
-        test.range = new vscode.Range(i, 0, i, m[0].length);
-        seen.add(id);
-      }
-
-      // Update multi-line state from this line for subsequent lines. An unterminated
-      // block comment (last `/*` with no following `*/`) opens a region; a heredoc
-      // introducer opens one until its tag reappears alone on a line. Ignore a
-      // trailing `//`/`#` line comment so its contents can't spuriously open either.
-      const code = stripLineComment(line);
-      const openBlock = code.lastIndexOf('/*');
-      if (openBlock >= 0 && code.indexOf('*/', openBlock) < 0) {
-        inBlockComment = true;
+    for (const t of tests) {
+      const line = Math.max(0, t.range.line - 1);
+      const id = `${uri.toString()}::${line}:${t.name}`;
+      let item = file.children.get(id);
+      if (!item) {
+        item = controller.createTestItem(id, t.name, uri);
+        file.children.add(item);
       } else {
-        const h = HEREDOC_OPEN_RE.exec(code);
-        if (h) {
-          heredocTag = h[1];
-        }
+        item.label = t.name;
       }
+      item.range = new vscode.Range(
+        line,
+        Math.max(0, t.range.column - 1),
+        Math.max(0, t.range.end_line - 1),
+        Math.max(0, t.range.end_column - 1),
+      );
+      seen.add(id);
     }
-    // Drop tests that no longer exist.
     const stale: string[] = [];
     file.children.forEach((c) => {
       if (!seen.has(c.id)) {
@@ -166,45 +101,85 @@ export function createTestController(context: vscode.ExtensionContext): vscode.T
       }
     });
     stale.forEach((id) => file.children.delete(id));
-
-    if (file.children.size === 0) {
-      controller.items.delete(file.id);
-    }
   }
 
-  async function discoverInFile(uri: vscode.Uri): Promise<void> {
-    try {
-      const bytes = await vscode.workspace.fs.readFile(uri);
-      discoverInText(uri, Buffer.from(bytes).toString('utf8'));
-    } catch {
-      /* unreadable — ignore */
-    }
+  /** Discover tests in an open (possibly unsaved) document via its buffer. */
+  async function discoverInDocument(document: vscode.TextDocument): Promise<void> {
+    const syms = await symbolsForDocument(document);
+    updateFileTests(
+      document.uri,
+      syms.filter((s) => s.kind === 'test'),
+    );
   }
 
-  // Lazy full-workspace discovery.
+  /** Discover tests in a file on disk. */
+  async function discoverInFileUri(uri: vscode.Uri): Promise<void> {
+    if (uri.scheme !== 'file') {
+      return;
+    }
+    const dir = cwdFor(uri) ?? path.dirname(uri.fsPath);
+    const syms = await symbolsForPath(dir, uri.fsPath);
+    updateFileTests(
+      uri,
+      syms.filter((s) => s.kind === 'test'),
+    );
+  }
+
+  // Lazy full-workspace discovery: one `functy symbols .` per folder.
   controller.resolveHandler = async (item) => {
     if (item) {
-      return; // file items resolve their children eagerly at discovery time
+      return;
     }
-    const uris = await vscode.workspace.findFiles('**/*.cty', '**/node_modules/**');
-    await Promise.all(uris.map(discoverInFile));
+    for (const folder of vscode.workspace.workspaceFolders ?? []) {
+      const cwd = folder.uri.fsPath;
+      const syms = await symbolsForPath(cwd, '.');
+      const byFile = new Map<string, { name: string; range: JsonRange }[]>();
+      for (const s of syms) {
+        if (s.kind !== 'test') {
+          continue;
+        }
+        const abs = path.resolve(cwd, s.range.file);
+        const arr = byFile.get(abs) ?? [];
+        arr.push(s);
+        byFile.set(abs, arr);
+      }
+      for (const [abs, tests] of byFile) {
+        updateFileTests(vscode.Uri.file(abs), tests);
+      }
+    }
   };
 
-  // Keep discovery in sync with open editors.
+  // Discover in open editors now, and keep in sync (debounced on change, since
+  // each discovery spawns functy).
   for (const doc of vscode.workspace.textDocuments) {
     if (doc.languageId === 'functy') {
-      discoverInText(doc.uri, doc.getText());
+      void discoverInDocument(doc);
     }
   }
+  const debounce = new Map<string, NodeJS.Timeout>();
+  const scheduleDoc = (document: vscode.TextDocument) => {
+    const key = document.uri.toString();
+    const prev = debounce.get(key);
+    if (prev) {
+      clearTimeout(prev);
+    }
+    debounce.set(
+      key,
+      setTimeout(() => {
+        debounce.delete(key);
+        void discoverInDocument(document);
+      }, 400),
+    );
+  };
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument((doc) => {
       if (doc.languageId === 'functy') {
-        discoverInText(doc.uri, doc.getText());
+        void discoverInDocument(doc);
       }
     }),
     vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.languageId === 'functy') {
-        discoverInText(e.document.uri, e.document.getText());
+        scheduleDoc(e.document);
       }
     }),
   );
@@ -212,14 +187,13 @@ export function createTestController(context: vscode.ExtensionContext): vscode.T
   const watcher = vscode.workspace.createFileSystemWatcher('**/*.cty');
   context.subscriptions.push(
     watcher,
-    watcher.onDidCreate(discoverInFile),
+    watcher.onDidCreate((uri) => void discoverInFileUri(uri)),
     watcher.onDidChange((uri) => {
-      // Prefer the open-document version if any (it's more current).
       const open = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
       if (open) {
-        discoverInText(uri, open.getText());
+        void discoverInDocument(open);
       } else {
-        void discoverInFile(uri);
+        void discoverInFileUri(uri);
       }
     }),
     watcher.onDidDelete((uri) => controller.items.delete(uri.toString())),
@@ -375,9 +349,9 @@ export function createTestController(context: vscode.ExtensionContext): vscode.T
       // Refresh discovery for the changed file, then re-run its tests.
       const open = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
       if (open) {
-        discoverInText(uri, open.getText());
+        await discoverInDocument(open);
       } else {
-        await discoverInFile(uri);
+        await discoverInFileUri(uri);
       }
       const fileNode = controller.items.get(uri.toString());
       if (!fileNode) {

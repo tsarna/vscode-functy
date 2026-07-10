@@ -112,29 +112,35 @@ Shipped and adopted:
   parses the plain-text `version` output on purpose, to detect binaries too old to have any
   `--json`).
 
+Also shipped and adopted:
+
+- **`functy symbols --json`** — backs both the **Outline** (`src/symbols.ts`) and **test
+  discovery** (`src/testController.ts`) via `src/symbolsClient.ts`, replacing the former regex
+  scanners with authoritative parser output (correct names, ranges, signatures, doc comments,
+  and comment/heredoc handling for free). The parser's error recovery keeps it working mid-edit
+  (only an unclosed brace or lexer garbage truncates below the error — an acceptable transient
+  degradation).
+
 Still wanted:
 
-- **`functy symbols --json` / `outline --json`** → replace **both** the regex document-symbol
-  outline (`src/symbols.ts`) **and** the regex test discovery (`src/testController.ts`) with
-  authoritative parser output (correct names, ranges, comment/heredoc handling for free).
 - **`functy doc --json <name>` / `help --json <name>`** → **pre-LSP hovers** (spawn-on-hover,
-  cached), a stepping stone toward the LSP hover.
+  cached). Deferred: a client-side hover is exactly the semantic feature we leave to the LSP
+  (see *Explicitly not doing*), so this waits for the language server.
 
 ## Minor hardening backlog
 
-Small correctness/UX items, not blocking:
+Small correctness/UX items:
 
-- **Duplicate test descriptions collapse to one Test item** — the item id and the result map
-  are keyed by name, so a second `test "same name"` silently shadows the first. Disambiguate
-  (append an occurrence index) once discovery moves to `symbols --json`.
-- **Untitled / unsaved `.cty` buffers** — Run/Check `save()` first, which prompts. Confirm the
-  flow isn't surprising; a stdin-based check (above) would remove the need to save.
-- **Formatter is a silent no-op on a parse error** — correct (it must not blank the document),
-  but gives no hint why nothing happened; consider a subtle status message.
+- **Duplicate test descriptions** — *fixed*: test item IDs now embed the source line (from
+  `symbols --json`), so two `test "same name"` blocks are distinct items.
+- **Test discovery brace-on-next-line / string edge cases** — *retired*: discovery is now
+  parser-driven (`symbols --json`), not a line scanner.
+- **Formatter silent no-op on a parse error** — *fixed*: shows a brief status-bar hint.
 - **`functy.path` must be a bare executable** — a value with arguments (e.g. `go run …`) breaks
-  `spawn`. Documented in the setting description; could validate and warn.
-- **Test discovery brace-on-next-line / string edge cases** — the line scanner is a heuristic;
-  `symbols --json` would retire it entirely.
+  `spawn`; documented in the setting description, and a bad value surfaces as the version
+  check's "could not find the binary" warning. Left as-is.
+- **Untitled / unsaved `.cty` buffers** — Run/Check `save()` first, which prompts (standard
+  flow). `checkOnType` already checks the unsaved buffer via stdin. Left as-is.
 
 ## Explicitly not doing (until the LSP)
 
