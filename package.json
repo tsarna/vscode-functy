@@ -86,7 +86,7 @@
           {
             "id": "install",
             "title": "Install the functy CLI",
-            "description": "This extension drives the `functy` binary (0.8.1+). Install it, put it on your PATH, or set the path.\n[Open functy.path Setting](command:workbench.action.openSettings?%5B%22functy.path%22%5D)",
+            "description": "This extension drives the `functy` binary (0.9.0+). Install it (on macOS: `brew install tsarna/tap/functy`), put it on your PATH, or set the path.\n[Open functy.path Setting](command:workbench.action.openSettings?%5B%22functy.path%22%5D)",
             "media": { "markdown": "walkthroughs/install.md" },
             "completionEvents": ["onSettingChanged:functy.path"]
           },

@@ -1,8 +1,14 @@
 ## Install the functy CLI
 
-This extension drives the **`functy`** command-line tool (version **0.8.1 or newer**).
+This extension drives the **`functy`** command-line tool (version **0.9.0 or newer**).
 
-Install it with Go:
+**macOS** — with [Homebrew](https://brew.sh):
+
+```
+brew install tsarna/tap/functy
+```
+
+**Any platform** — with Go:
 
 ```
 go install github.com/tsarna/functy/cmd/functy@latest

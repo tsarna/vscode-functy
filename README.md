@@ -43,8 +43,15 @@ expressions. functy source files use the `.cty` extension.
 
 The extension shells out to the `functy` binary, and requires **functy 0.9.0 or
 newer** (it relies on `eval`, `symbols`, `check --json -`, and the `--json`
-reports). It warns on startup if the binary is missing or too old. Install it
-with:
+reports). It warns on startup if the binary is missing or too old.
+
+Install it on macOS with [Homebrew](https://brew.sh):
+
+```
+brew install tsarna/tap/functy
+```
+
+…or on any platform with Go:
 
 ```
 go install github.com/tsarna/functy/cmd/functy@latest
