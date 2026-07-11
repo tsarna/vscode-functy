@@ -1,5 +1,7 @@
 .gitignore
 .vscodeignore
+FUTURE.md
+renovate.json
 .vscode/**
 node_modules/**
 src/**
