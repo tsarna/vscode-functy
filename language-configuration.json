@@ -3,6 +3,15 @@
     "lineComment": "//",
     "blockComment": ["/*", "*/"]
   },
+  // VS Code's default word pattern, extended so a qualified name
+  // (acme::math::double) counts as ONE word. Without this, a double-click or
+  // ctrl+D on a namespaced call selects only a single segment, and word-based
+  // suggestions offer the segments separately instead of the callable name.
+  //
+  // A single ':' stays a separator (it still ends a word in `x: number` and in
+  // the ternary), and only the `::` pair joins segments. A leading '_' needs
+  // nothing — it is already a word character, so `_helper` always selected whole.
+  "wordPattern": "(-?\\d*\\.\\d\\w*)|([^\\`\\~\\!\\@\\#\\%\\^\\&\\*\\(\\)\\-\\=\\+\\[\\{\\]\\}\\\\\\|\\;\\:\\'\\\"\\,\\.\\<\\>\\/\\?\\s]+(?:::[^\\`\\~\\!\\@\\#\\%\\^\\&\\*\\(\\)\\-\\=\\+\\[\\{\\]\\}\\\\\\|\\;\\:\\'\\\"\\,\\.\\<\\>\\/\\?\\s]+)*)",
   "brackets": [
     ["{", "}"],
     ["[", "]"],

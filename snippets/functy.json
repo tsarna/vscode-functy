@@ -1,4 +1,13 @@
 {
+  "Namespace": {
+    "prefix": "namespace",
+    "body": [
+      "namespace ${1:name}",
+      "",
+      "$0"
+    ],
+    "description": "Namespace declaration (must be the file's first declaration)"
+  },
   "Function": {
     "prefix": "func",
     "body": [
@@ -7,6 +16,15 @@
       "}"
     ],
     "description": "Function declaration"
+  },
+  "Private function": {
+    "prefix": "_func",
+    "body": [
+      "func _${1:name}(${2:params}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Namespace-local function: callable within its namespace, never registered with the host"
   },
   "Function with return type": {
     "prefix": "funcret",

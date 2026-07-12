@@ -14,8 +14,16 @@ expressions. functy source files use the `.cty` extension.
   matching, auto-closing pairs, and indentation.
 - **Outline** — `func`, `const`, `var`, `type`, and `test` declarations appear in
   the Outline view, breadcrumbs, sticky scroll, and "Go to Symbol" (⇧⌘O).
-- **Snippets** — `func`, `funcret`, `if`, `ifelse`, `forin`, `forc`, `while`,
-  `switch`, `trycatch`, `test`, `var`, `const`, `type`.
+  Namespace-local (`_`-prefixed) declarations are listed too, marked *private*.
+- **Namespaces** — a namespaced file's declarations nest under its `namespace`
+  node, so breadcrumbs and sticky scroll keep telling you which namespace you are
+  editing (`math.cty > acme::math > double`) — the fact that matters, since a
+  namespace changes the registered name of every function in the file. The
+  `namespace` declaration and qualified calls (`acme::math::double(21)`) are
+  highlighted, and a qualified name selects as a single word (double-click, ⌘D,
+  word motions).
+- **Snippets** — `namespace`, `func`, `_func`, `funcret`, `if`, `ifelse`, `forin`,
+  `forc`, `while`, `switch`, `trycatch`, `test`, `var`, `const`, `type`.
 - **Commands** — **functy: Run File** (`functy run`) and **functy: Check File**
   (`functy check`), with output in the *functy* output channel. Errors (including
   runtime errors) land in the Problems panel at their source location.
@@ -45,6 +53,11 @@ The extension shells out to the `functy` binary, and requires **functy 0.9.0 or
 newer** (it relies on `eval`, `symbols`, `check --json -`, and the `--json`
 reports). It warns on startup if the binary is missing or too old.
 
+The namespace features degrade cleanly rather than requiring a newer binary: the
+syntax highlighting and word selection are static, and the outline's namespace and
+*private* markers come from optional `symbols --json` fields that an older functy
+simply omits. They light up once the binary supports namespaces.
+
 Install it on macOS with [Homebrew](https://brew.sh):
 
 ```
@@ -65,7 +78,7 @@ with the **functy.path** setting.
 | Setting | Default | Description |
 |---|---|---|
 | `functy.path` | `functy` | Path to the functy binary (a single executable, not a command line). |
-| `functy.runFunc` | `main` | Entry function invoked by **Run File**. |
+| `functy.runFunc` | `main` | Entry function invoked by **Run File**. May be qualified (`acme::math::main`); a bare name is resolved if it is unambiguous across namespaces. |
 | `functy.checkOnSave` | `true` | Type-check `.cty` files on save (side-effect-free). |
 
 Format-on-save uses the standard `editor.formatOnSave` setting.

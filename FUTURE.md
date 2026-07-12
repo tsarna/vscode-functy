@@ -76,8 +76,13 @@ is largely a *protocol adapter over existing semantic APIs*, not a reimplementat
   parser/AST change **inside functy** (which also sharpens `check`'s error precision, so
   it's not wasted). Spiking Phase 0 answers this early.
 - **Sequencing caveat.** Defer any feature tied to *unshipped* language design —
-  cross-file go-to-definition, namespacing / imports, first-class-function completion —
-  until those land, or it will be reworked.
+  cross-file go-to-definition, imports, first-class-function completion — until those
+  land, or it will be reworked. (**Namespacing has now shipped** in functy, so the
+  namespace half of this caveat is discharged: `symbols --json` carries
+  `namespace` / `qualified` / `private`, and go-to-definition can resolve a qualified
+  call to its declaration without guessing. Imports have *not* shipped and are
+  explicitly deferred upstream, so cross-*file* resolution still has no language-level
+  edge to follow — a qualified name is the only cross-namespace reference there is.)
 - **What the LSP replaces here.** Check-on-save and the run/check diagnostics plumbing
   (LSP gives live diagnostics); optionally the formatter and the client-side outline. The
   Test Explorer stays CLI-driven — LSP does not run tests; the VSCode Testing API is
@@ -107,6 +112,26 @@ still wanted:
 - **`functy doc --json <name>` / `help --json <name>`** → **pre-LSP hovers** (spawn on
   hover, cached). Deferred: a client-side hover is exactly the semantic feature we leave to
   the LSP (see *Explicitly not doing*), so this waits for the language server.
+
+## Namespace follow-ups
+
+The namespace feature landed (outline nesting, highlighting, word selection, snippets).
+Two things it makes newly *possible* were deliberately left out:
+
+- **A symbol-driven entry-function picker.** `functy: Run with Arguments` prompts for the
+  entry function with a free-text `showInputBox`. Now that `symbols --json` carries
+  `qualified` and `private`, that could become a QuickPick over the file's functions —
+  showing bare names, hiding (or dimming) private ones, and passing `qualified ?? name` to
+  `--func`. Note this would be the first place the extension *depends* on a namespace-aware
+  binary, so it needs a `MIN_VERSION` bump rather than the graceful degradation everything
+  else gets.
+- **Go-to-definition for a qualified call.** `acme::math::double(21)` names its declaration
+  unambiguously, and `symbols --json` reports every declaration's namespace — so resolving
+  the call to its `func` is now a pure lookup, no guessing. Within a file this is easy; the
+  cross-*file* case still has no language-level edge to follow, because imports have not
+  shipped upstream (a qualified name is the only cross-namespace reference there is), so
+  the extension would have to scan the workspace's `.cty` files itself. That is LSP work —
+  see *Explicitly not doing*.
 
 ## Minor hardening backlog
 

@@ -261,7 +261,7 @@
         "functy.runFunc": {
           "type": "string",
           "default": "main",
-          "description": "Entry function invoked by the 'functy: Run File' command."
+          "description": "Entry function invoked by the 'functy: Run File' command. May be fully qualified (e.g. 'acme::math::main'); a bare name is resolved when it is unambiguous across namespaces."
         },
         "functy.checkOnSave": {
           "type": "boolean",

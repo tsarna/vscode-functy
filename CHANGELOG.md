@@ -1,5 +1,41 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Namespace support**, tracking functy's new `namespace` / `_` visibility feature.
+  All of it degrades cleanly against an older binary: the highlighting and word
+  selection are static, and the outline's namespace data comes from optional
+  `symbols --json` fields that a functy predating namespaces simply omits.
+  - **Outline** — a namespaced file's declarations nest under its `namespace` node,
+    so breadcrumbs and sticky scroll carry the namespace while you scroll through a
+    function body. Namespace-local (`_`-prefixed) declarations are listed — an
+    outline should reflect the whole file — and marked *private* in the detail text.
+  - **Highlighting** — the `namespace foo::bar` declaration, and qualified calls
+    (`acme::math::double(21)`), where the namespace path and the called function are
+    now scoped separately. A qualified call to a name that happens to match a
+    built-in (`acme::text::assert(...)`) is no longer miscolored as that built-in —
+    it isn't one: a namespace's own function shadows the built-in inside it.
+  - **Word selection** — a qualified name counts as one word, so double-click, ⌘D,
+    and word motions treat `acme::math::double` as a unit instead of three fragments.
+  - **Snippets** — `namespace`, and `_func` for a namespace-local function.
+  - `functy.runFunc` may now be a qualified name (`acme::math::main`).
+
+### Fixed
+
+- **Warnings from `functy run` reached the Problems panel.** A successful run
+  (exit 0) had its diagnostics deleted without parsing stderr, so a warning-only
+  report — which functy can now produce, e.g. a namespaced function shadowing a
+  built-in — was silently dropped. The report is now parsed regardless of exit code.
+
+### Changed
+
+- An unrecognized symbol `kind` from a newer functy no longer blanks the Outline
+  view. It previously indexed a total record and yielded `undefined` where a
+  `vscode.SymbolKind` was required, which threw and took down the whole outline for
+  the file; unknown kinds now fall back to a generic symbol.
+
 ## 0.1.0
 
 Initial release. Requires **functy 0.9.0 or newer** — the extension drives the

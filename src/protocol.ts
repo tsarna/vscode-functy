@@ -28,10 +28,31 @@ export interface JsonDiagnostics {
   diagnostics: JsonDiagnostic[];
 }
 
-/** One symbol from `functy symbols --json`. */
+/**
+ * One symbol from `functy symbols --json`.
+ *
+ * `kind` is open-ended by design: a newer functy may emit a kind this extension
+ * has never heard of, and that must never break the outline. Consumers resolve it
+ * through a lookup with a fallback rather than a total record — see symbols.ts.
+ */
+export type FunctySymbolKind = 'func' | 'const' | 'var' | 'type' | 'test' | 'namespace';
+
 export interface FunctySymbol {
-  kind: 'func' | 'const' | 'var' | 'type' | 'test';
+  kind: FunctySymbolKind | (string & {});
+  /** The bare declared name, as written (may start with `_`). */
   name: string;
+  /**
+   * The declaration's namespace, e.g. "acme::math". Absent in the global
+   * namespace, and absent entirely from a functy older than namespaces.
+   */
+  namespace?: string;
+  /**
+   * The name a function is callable under, e.g. "acme::math::double". Absent in
+   * the global namespace, where it would merely repeat `name`.
+   */
+  qualified?: string;
+  /** True for a `_`-prefixed declaration: namespace-local, never seen by the host. */
+  private?: boolean;
   detail?: string;
   doc?: string;
   range: JsonRange;
@@ -39,6 +60,37 @@ export interface FunctySymbol {
 
 export interface SymbolsReport {
   symbols: FunctySymbol[];
+}
+
+/**
+ * Group symbols under the namespace that governs them, as parent/child indices
+ * into `symbols` — the pure half of building a nested outline.
+ *
+ * A namespace owns every declaration that follows it. A well-formed file has at
+ * most one, as its first declaration, so this is normally a single root; but
+ * `symbols --json` is best-effort on a file mid-edit and can report a misplaced or
+ * duplicate namespace, and grouping by position degrades sensibly rather than
+ * dropping declarations. With no namespace at all, everything stays a root — which
+ * is every file today, and any file compiled by a functy predating namespaces.
+ *
+ * Returns the root indices in order, each with the indices of its children.
+ */
+export function groupByNamespace(
+  symbols: FunctySymbol[],
+): { index: number; children: number[] }[] {
+  const roots: { index: number; children: number[] }[] = [];
+  let current: { index: number; children: number[] } | undefined;
+  symbols.forEach((s, i) => {
+    if (s.kind === 'namespace') {
+      current = { index: i, children: [] };
+      roots.push(current);
+    } else if (current) {
+      current.children.push(i);
+    } else {
+      roots.push({ index: i, children: [] }); // before any namespace
+    }
+  });
+  return roots;
 }
 
 /** 0-based, non-negative coordinates derived from a 1-based {@link JsonRange}. */

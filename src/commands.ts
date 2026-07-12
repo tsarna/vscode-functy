@@ -116,23 +116,25 @@ async function runProgram(
     out.appendLine(res.stdout.replace(/\n$/, ''));
   }
 
-  if (res.code === 0) {
-    diagnostics.delete(uri);
-    out.appendLine('\n[exit 0]');
-    return;
-  }
-
+  // Parse the report regardless of exit code: a successful run can still carry
+  // warnings (e.g. a namespaced function shadowing a built-in), and those belong
+  // in the Problems panel too. `run --json` guarantees stderr is a single report
+  // object, so warnings and errors always arrive together in one parse.
   const report = parseDiagnostics(res.stderr);
   if (report) {
     const n = applyReport(report, uri, diagnostics);
-    out.appendLine(`\n[exit ${res.code}] — ${n} diagnostic${n === 1 ? '' : 's'} (see Problems)`);
-  } else {
-    // Not a JSON report (unexpected) — surface the raw stderr.
-    if (res.stderr.trim()) {
-      out.appendLine(res.stderr.replace(/\n$/, ''));
-    }
-    out.appendLine(`\n[exit ${res.code}]`);
+    const suffix = n > 0 ? ` — ${n} diagnostic${n === 1 ? '' : 's'} (see Problems)` : '';
+    out.appendLine(`\n[exit ${res.code}]${suffix}`);
+    return;
   }
+
+  // No JSON report. On success that is the normal case (stderr is empty);
+  // otherwise it is unexpected, so surface the raw stderr.
+  diagnostics.delete(uri);
+  if (res.code !== 0 && res.stderr.trim()) {
+    out.appendLine(res.stderr.replace(/\n$/, ''));
+  }
+  out.appendLine(`\n[exit ${res.code}]`);
 }
 
 /** Run the active document's entry function via `functy run --json`. */

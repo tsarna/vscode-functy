@@ -1,14 +1,28 @@
 import * as vscode from 'vscode';
-import { FunctySymbol, JsonRange, zeroBased } from './protocol';
+import { FunctySymbol, JsonRange, groupByNamespace, zeroBased } from './protocol';
 import { symbolsForDocument } from './symbolsClient';
 
-const KIND: Record<FunctySymbol['kind'], vscode.SymbolKind> = {
+const KIND: Record<string, vscode.SymbolKind | undefined> = {
   func: vscode.SymbolKind.Function,
   const: vscode.SymbolKind.Constant,
   var: vscode.SymbolKind.Variable,
   type: vscode.SymbolKind.Interface,
   test: vscode.SymbolKind.Method,
+  namespace: vscode.SymbolKind.Namespace,
 };
+
+/**
+ * Map a functy symbol kind to a vscode.SymbolKind, tolerating one we don't know.
+ *
+ * This must never return undefined. `new vscode.DocumentSymbol(...)` validates
+ * its arguments and throws on a missing kind, and a throw here takes down the
+ * whole outline for the file — so a newer functy emitting a kind this extension
+ * predates would blank the Outline view entirely rather than degrade. The
+ * fallback keeps an unknown declaration visible, just generically typed.
+ */
+function symbolKind(kind: string): vscode.SymbolKind {
+  return KIND[kind] ?? vscode.SymbolKind.Object;
+}
 
 /** Convert a 1-based functy range to a 0-based vscode.Range. */
 function toRange(r: JsonRange): vscode.Range {
@@ -17,17 +31,60 @@ function toRange(r: JsonRange): vscode.Range {
 }
 
 /**
+ * The outline's secondary text: the signature when there is one, else the kind —
+ * prefixed with `private` for a namespace-local declaration, since VS Code has no
+ * visibility tag and the leading `_` alone is easy to miss in a long list.
+ */
+function symbolDetail(s: FunctySymbol): string {
+  const base = s.detail ?? s.kind;
+  return s.private ? `private ${base}` : base;
+}
+
+/**
+ * Nest each namespace's declarations under it (grouping by {@link groupByNamespace}),
+ * so breadcrumbs and sticky scroll carry the namespace while you scroll through a
+ * function body — the fact that matters, since a namespace changes the registered
+ * name of every function in the file. Files with no namespace declaration stay
+ * flat, exactly as before.
+ *
+ * The only vscode-specific part: a parent's range must CONTAIN its children's, or
+ * the tree renders wrong. A namespace declaration's own range is just its line, so
+ * the node is widened to span the declarations it takes as children.
+ */
+function nest(
+  symbols: FunctySymbol[],
+  built: vscode.DocumentSymbol[],
+): vscode.DocumentSymbol[] {
+  return groupByNamespace(symbols).map(({ index, children }) => {
+    const parent = built[index];
+    for (const c of children) {
+      const child = built[c];
+      parent.children.push(child);
+      if (child.range.end.isAfter(parent.range.end)) {
+        parent.range = new vscode.Range(parent.range.start, child.range.end);
+      }
+    }
+    return parent;
+  });
+}
+
+/**
  * Outline / document symbols backed by `functy symbols --json` — authoritative
  * kind, name, signature, and full range straight from the parser (parse errors
  * are tolerated, so it keeps working mid-edit). The selection range is the name
  * token, located on the definition's first line.
+ *
+ * The label is the *bare* name (`name`), not the qualified one: the namespace is
+ * already the node you are sitting under, so repeating it on every entry is noise.
+ * Private declarations are shown — an outline should reflect the whole file — and
+ * marked in the detail text.
  */
 export const symbolProvider: vscode.DocumentSymbolProvider = {
   async provideDocumentSymbols(
     document: vscode.TextDocument,
   ): Promise<vscode.DocumentSymbol[]> {
     const symbols = await symbolsForDocument(document);
-    return symbols.map((s) => {
+    const built = symbols.map((s) => {
       const range = toRange(s.range);
       const line = document.lineAt(range.start.line).text;
       const col = line.indexOf(s.name, range.start.character);
@@ -35,7 +92,14 @@ export const symbolProvider: vscode.DocumentSymbolProvider = {
         col >= 0
           ? new vscode.Range(range.start.line, col, range.start.line, col + s.name.length)
           : new vscode.Range(range.start, range.start);
-      return new vscode.DocumentSymbol(s.name, s.detail ?? s.kind, KIND[s.kind], range, selection);
+      return new vscode.DocumentSymbol(
+        s.name,
+        symbolDetail(s),
+        symbolKind(s.kind),
+        range,
+        selection,
+      );
     });
+    return nest(symbols, built);
   },
 };

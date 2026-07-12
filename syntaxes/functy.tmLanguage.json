@@ -6,6 +6,7 @@
   "patterns": [
     { "include": "#comment_block" },
     { "include": "#comment_line" },
+    { "include": "#namespace_decl" },
     { "include": "#func_decl" },
     { "include": "#type_decl" },
     { "include": "#test_decl" },
@@ -17,6 +18,7 @@
     { "include": "#string" },
     { "include": "#heredoc" },
     { "include": "#number" },
+    { "include": "#qualified_call" },
     { "include": "#builtin_function" },
     { "include": "#function_call" },
     { "include": "#operator" }
@@ -43,6 +45,14 @@
       "name": "comment.block.functy",
       "begin": "/\\*",
       "end": "\\*/"
+    },
+    "namespace_decl": {
+      "comment": "top-level namespace declaration: namespace foo or namespace foo::bar. Anchored at line start because `namespace` is a CONTEXTUAL keyword — it stays a legal identifier everywhere else (func namespace(), var namespace = 1), so it must never be matched by the bare declaration_keyword alternation.",
+      "match": "^\\s*(namespace)\\s+([a-zA-Z_][a-zA-Z0-9_]*(?:::[a-zA-Z_][a-zA-Z0-9_]*)*)",
+      "captures": {
+        "1": { "name": "keyword.control.namespace.functy" },
+        "2": { "name": "entity.name.namespace.functy" }
+      }
     },
     "func_decl": {
       "comment": "func <name> — colorize the declaration keyword and function name",
@@ -171,6 +181,14 @@
         }
       ]
     },
+    "qualified_call": {
+      "comment": "A namespaced call: acme::math::double(1). Must precede builtin_function and function_call — otherwise builtin_function would color the final segment of acme::text::assert(...) as the built-in `assert` (it is not: a namespace's own function shadows the built-in inside it), and function_call would scope only that last segment, leaving the qualifier path unstyled.",
+      "match": "\\b((?:[a-zA-Z_][a-zA-Z0-9_]*::)+)([a-zA-Z_][a-zA-Z0-9_]*)(?=\\s*\\()",
+      "captures": {
+        "1": { "name": "entity.name.namespace.functy" },
+        "2": { "name": "entity.name.function.call.functy" }
+      }
+    },
     "builtin_function": {
       "name": "support.function.builtin.functy",
       "match": "\\b(assert|skip|error|cond|switch|try|can|typeof|typekind|doc|help|eval)\\b(?=\\s*\\()"
@@ -224,7 +242,7 @@
       ]
     },
     "expression": {
-      "comment": "Shared HCL-style expression syntax used on statement RHSs and inside interpolations.",
+      "comment": "Shared HCL-style expression syntax used on statement RHSs and inside interpolations. Mirrors the top-level include list — a new call rule must be added in BOTH places, or it won't apply inside ${...}.",
       "patterns": [
         { "include": "#comment_block" },
         { "include": "#comment_line" },
@@ -233,6 +251,7 @@
         { "include": "#string" },
         { "include": "#heredoc" },
         { "include": "#number" },
+        { "include": "#qualified_call" },
         { "include": "#builtin_function" },
         { "include": "#function_call" },
         { "include": "#operator" }

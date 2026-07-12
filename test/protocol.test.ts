@@ -1,14 +1,25 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  FunctySymbol,
   compareVersions,
   coreVersion,
   escapeRegex,
+  groupByNamespace,
   parseDiagnostics,
   parseSymbols,
   tokenizeArgs,
   zeroBased,
 } from '../src/protocol';
+
+/** A minimal symbol; only kind and name matter to groupByNamespace. */
+function sym(kind: string, name: string): FunctySymbol {
+  return {
+    kind,
+    name,
+    range: { file: 'a.cty', line: 1, column: 1, end_line: 1, end_column: 1 },
+  };
+}
 
 test('coreVersion extracts x.y.z', () => {
   assert.equal(coreVersion('0.9.0'), '0.9.0');
@@ -172,6 +183,103 @@ test('parseSymbols accepts a well-formed report', () => {
   assert.equal(syms[0].kind, 'test');
   assert.equal(syms[1].name, 'add');
   assert.equal(syms[1].detail, 'func add(a, b)');
+});
+
+test('parseSymbols carries the namespace fields', () => {
+  // The namespace/qualified/private fields are additive: `name` stays the bare
+  // declared name, and a private declaration is still reported (an outline shows
+  // the whole file) rather than withheld.
+  const syms = parseSymbols(
+    JSON.stringify({
+      symbols: [
+        {
+          kind: 'func',
+          name: '_twice',
+          namespace: 'acme::math',
+          qualified: 'acme::math::_twice',
+          private: true,
+          detail: '(n: number) -> number',
+          range: { file: 'a.cty', line: 5, column: 1, end_line: 7, end_column: 1 },
+        },
+      ],
+    }),
+  );
+  assert.equal(syms.length, 1);
+  assert.equal(syms[0].name, '_twice');
+  assert.equal(syms[0].namespace, 'acme::math');
+  assert.equal(syms[0].qualified, 'acme::math::_twice');
+  assert.equal(syms[0].private, true);
+});
+
+test('parseSymbols tolerates a file with no namespace (fields absent)', () => {
+  // A global-namespace file — and any functy predating namespaces — omits all
+  // three fields. They must read as undefined, not throw or default to "".
+  const syms = parseSymbols(
+    JSON.stringify({
+      symbols: [
+        {
+          kind: 'func',
+          name: 'add',
+          range: { file: 'a.cty', line: 1, column: 1, end_line: 1, end_column: 9 },
+        },
+      ],
+    }),
+  );
+  assert.equal(syms[0].namespace, undefined);
+  assert.equal(syms[0].qualified, undefined);
+  assert.equal(syms[0].private, undefined);
+});
+
+test('parseSymbols passes through a kind it has never heard of', () => {
+  // Forward-compat: a newer functy may emit a new kind. It must survive parsing;
+  // symbolKind() then maps it to a fallback rather than blanking the outline.
+  const syms = parseSymbols(
+    JSON.stringify({
+      symbols: [
+        {
+          kind: 'someFutureKind',
+          name: 'x',
+          range: { file: 'a.cty', line: 1, column: 1, end_line: 1, end_column: 2 },
+        },
+      ],
+    }),
+  );
+  assert.equal(syms.length, 1);
+  assert.equal(syms[0].kind, 'someFutureKind');
+});
+
+test('groupByNamespace leaves a file with no namespace flat', () => {
+  // Every file today, and any file from a functy predating namespaces.
+  const syms = [sym('func', 'a'), sym('func', 'b')];
+  assert.deepEqual(groupByNamespace(syms), [
+    { index: 0, children: [] },
+    { index: 1, children: [] },
+  ]);
+});
+
+test('groupByNamespace nests declarations under their namespace', () => {
+  const syms = [sym('namespace', 'acme::math'), sym('func', 'double'), sym('test', 'doubles')];
+  assert.deepEqual(groupByNamespace(syms), [{ index: 0, children: [1, 2] }]);
+});
+
+test('groupByNamespace degrades sensibly on a malformed file', () => {
+  // `symbols` is best-effort mid-edit, so it can report a namespace that is not
+  // first, or a second one. Neither may drop a declaration from the outline.
+  const syms = [
+    sym('func', 'orphan'), // before any namespace
+    sym('namespace', 'a'),
+    sym('func', 'x'),
+    sym('namespace', 'b'), // a duplicate, mid-file
+    sym('func', 'y'),
+  ];
+  assert.deepEqual(groupByNamespace(syms), [
+    { index: 0, children: [] },
+    { index: 1, children: [2] },
+    { index: 3, children: [4] },
+  ]);
+  // Nothing lost: every input index appears exactly once.
+  const seen = groupByNamespace(syms).flatMap((r) => [r.index, ...r.children]).sort();
+  assert.deepEqual(seen, [0, 1, 2, 3, 4]);
 });
 
 test('parseSymbols returns [] on garbage and non-reports', () => {
