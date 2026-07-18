@@ -1,10 +1,45 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
+
+Tracks functy **0.10** (namespaces, `_` visibility, extern declarations) and
+**0.11** (defaulted optional attributes, execution limits).
+
+The minimum functy version is **unchanged at 0.9.0**. Nothing the extension calls
+requires a newer binary — every 0.10/0.11 addition below is either static
+(highlighting, snippets) or arrives through optional `symbols --json` fields that
+an older functy simply omits. The one exception is opt-in and documented as such:
+`functy.maxSteps`.
 
 ### Added
 
-- **Namespace support**, tracking functy's new `namespace` / `_` visibility feature.
+- **`functy.maxSteps`** — functy 0.11's per-invocation step budget, surfaced as a
+  setting and passed as `--max-steps` to run, test, eval, check, and the REPL, so
+  a runaway `while` in a `.cty` file aborts with an error instead of wedging the
+  editor's functy process. Unset by default, and *unset means the flag is never
+  passed* — `--max-steps` does not exist before 0.11, and an older binary would
+  reject it and fail every command. `0` is a real value (disables the limit), which
+  is why the unset state is `null` rather than `0`.
+- **Extern declarations in the Outline.** `symbols --json` reports `kind: "extern"`
+  for a bodiless declaration in a `//functy:extern` file; it now maps to a function
+  symbol and is tagged `extern` in the detail text. An extern carries a signature
+  exactly like a `func`, so without the tag it would read as a function actually
+  defined in the file — which is the one thing an extern is not.
+- **Highlighting for the 0.10/0.11 syntax:**
+  - `//functy:extern` and other `functy:` file directives now scope the directive
+    name as a keyword instead of rendering as an undifferentiated comment. An
+    extern file is declared by nothing but that line. Host directives
+    (`//vinculum:cache 5m`) still fall through to the generic directive rule.
+  - `error`, functy's built-in error type, highlights as a type in an annotation
+    (`catch e: error`). The call form `error("boom")` is excluded, so it stays
+    scoped as the built-in function it is.
+  - An optional parameter's `?` (`func parsetime(format?, s: string)`) is scoped as
+    an optional marker rather than the ternary operator, and a variadic `*args` as
+    a variadic marker rather than multiplication.
+- **Snippets** for `extern` (a full extern file) and `externfunc`, `optional` and
+  `object` (0.11's `optional(T, default)`), `tryfinally`, `defer`, and `throw`.
+
+- **Namespace support**, tracking functy's `namespace` / `_` visibility feature.
   All of it degrades cleanly against an older binary: the highlighting and word
   selection are static, and the outline's namespace data comes from optional
   `symbols --json` fields that a functy predating namespaces simply omits.
@@ -24,6 +59,10 @@
 
 ### Fixed
 
+- **`eval` was listed as a built-in function** and highlighted as one. There is no
+  such built-in in functy — the real set is `assert`, `skip`, `error`, `cond`,
+  `switch`, `try`, `can`, `typeof`, `typekind`, `doc`, and `help`. (The `functy
+  eval` *subcommand*, which Evaluate Selection drives, is unrelated and unaffected.)
 - **Warnings from `functy run` reached the Problems panel.** A successful run
   (exit 0) had its diagnostics deleted without parsing stderr, so a warning-only
   report — which functy can now produce, e.g. a namespaced function shadowing a

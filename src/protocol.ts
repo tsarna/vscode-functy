@@ -35,7 +35,14 @@ export interface JsonDiagnostics {
  * has never heard of, and that must never break the outline. Consumers resolve it
  * through a lookup with a fallback rather than a total record — see symbols.ts.
  */
-export type FunctySymbolKind = 'func' | 'const' | 'var' | 'type' | 'test' | 'namespace';
+export type FunctySymbolKind =
+  | 'func'
+  | 'extern'
+  | 'const'
+  | 'var'
+  | 'type'
+  | 'test'
+  | 'namespace';
 
 export interface FunctySymbol {
   kind: FunctySymbolKind | (string & {});
@@ -126,6 +133,26 @@ export function parseSymbols(text: string): FunctySymbol[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * Splice `--max-steps N` in after the subcommand, or return `args` untouched when
+ * `n` is null.
+ *
+ * `null` — not 0 — is the "unset" value, because 0 is meaningful to functy: it
+ * *disables* the limit. Unset must mean "don't pass the flag at all", since
+ * `--max-steps` arrived in functy 0.11 and an older binary (still supported, see
+ * MIN_VERSION) would reject an unknown flag and fail every command.
+ *
+ * The flag goes after the subcommand rather than before it: it is a root
+ * persistent flag, so that position is valid for every subcommand, and it keeps
+ * the flag ahead of `run`'s `--` argument separator.
+ */
+export function withMaxSteps(args: string[], n: number | null): string[] {
+  if (n === null || args.length === 0) {
+    return args;
+  }
+  return [args[0], '--max-steps', String(n), ...args.slice(1)];
 }
 
 /** Extract the `x.y.z` core from a version string (dropping any `-rc.N` suffix). */

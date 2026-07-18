@@ -105,6 +105,70 @@
     ],
     "description": "Try / catch block"
   },
+  "Try / catch / finally": {
+    "prefix": "tryfinally",
+    "body": [
+      "try {",
+      "\t$1",
+      "} catch ${2:e} {",
+      "\t$3",
+      "} finally {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Try / catch / finally block"
+  },
+  "Defer": {
+    "prefix": "defer",
+    "body": [
+      "defer {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Defer a block until the enclosing function returns"
+  },
+  "Throw": {
+    "prefix": "throw",
+    "body": [
+      "throw ${0:\"message\"}"
+    ],
+    "description": "Raise an error"
+  },
+  "Extern file": {
+    "prefix": "extern",
+    "body": [
+      "//functy:extern",
+      "",
+      "// ${1:Describe what the host provides.}",
+      "func ${2:name}(${3:x: string}) -> ${4:type}",
+      "$0"
+    ],
+    "description": "An extern file: bodiless declarations describing the functions the HOST provides (never compiled, never callable)"
+  },
+  "Extern declaration": {
+    "prefix": "externfunc",
+    "body": [
+      "func ${1:name}(${2:x: string}) -> ${3:type}"
+    ],
+    "description": "A bodiless extern declaration (only legal in a //functy:extern file)"
+  },
+  "Optional object attribute with a default": {
+    "prefix": "optional",
+    "body": [
+      "optional(${1:number}, ${0:3})"
+    ],
+    "description": "An optional object attribute carrying a default value"
+  },
+  "Object type": {
+    "prefix": "object",
+    "body": [
+      "object({",
+      "\t${1:name} = ${2:string}",
+      "\t${3:retries} = optional(${4:number}, ${0:3})",
+      "})"
+    ],
+    "description": "An object type with a required and a defaulted-optional attribute"
+  },
   "Test": {
     "prefix": "test",
     "body": [

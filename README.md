@@ -80,6 +80,8 @@ with the **functy.path** setting.
 | `functy.path` | `functy` | Path to the functy binary (a single executable, not a command line). |
 | `functy.runFunc` | `main` | Entry function invoked by **Run File**. May be qualified (`acme::math::main`); a bare name is resolved if it is unambiguous across namespaces. |
 | `functy.checkOnSave` | `true` | Type-check `.cty` files on save (side-effect-free). |
+| `functy.checkOnType` | `false` | Type-check the unsaved buffer live as you type (debounced). Supersedes check-on-save when enabled. |
+| `functy.maxSteps` | *(unset)* | Steps one function invocation may take before a runaway loop is aborted, passed as `--max-steps`. Unset uses functy's own default; `0` disables the limit. **Needs functy 0.11.0+** — the flag is only passed when you set this. |
 
 Format-on-save uses the standard `editor.formatOnSave` setting.
 

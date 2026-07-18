@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { cwdFor, functyPath } from './config';
+import { cwdFor, functyPath, maxSteps } from './config';
 
 let replTerminal: vscode.Terminal | undefined;
 
@@ -42,6 +42,10 @@ function ensureRepl(loadFile?: vscode.Uri): vscode.Terminal {
   replTerminal = term;
 
   let cmd = `${dq(functyPath())} repl`;
+  const steps = maxSteps();
+  if (steps !== null) {
+    cmd += ` --max-steps ${steps}`;
+  }
   if (loadFile?.scheme === 'file') {
     cmd += ` ${dq(loadFile.fsPath)}`;
   }

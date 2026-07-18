@@ -2,7 +2,7 @@
   "name": "vscode-functy",
   "displayName": "functy",
   "description": "Syntax highlighting, snippets, commands, and test integration for functy (.cty) files",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "tsarna",
   "license": "MIT",
   "icon": "icon.png",
@@ -272,6 +272,15 @@
           "type": "boolean",
           "default": false,
           "description": "Type-check the unsaved buffer live as you type (debounced), via 'functy check --json -', instead of only on save. Off by default because it spawns a functy process on each edit pause. When enabled, it supersedes check-on-save."
+        },
+        "functy.maxSteps": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "minimum": 0,
+          "markdownDescription": "Steps a single functy function invocation may take before a runaway loop is aborted, passed as `--max-steps`. Leave unset to use functy's own default; `0` disables the limit entirely. Requires **functy 0.11.0 or newer** — the flag is only passed when you set this, so leaving it unset keeps older binaries working."
         }
       }
     }

@@ -21,11 +21,22 @@
     { "include": "#qualified_call" },
     { "include": "#builtin_function" },
     { "include": "#function_call" },
+    { "include": "#param_modifier" },
     { "include": "#operator" }
   ],
   "repository": {
     "comment_line": {
       "patterns": [
+        {
+          "comment": "A functy-recognized file directive: //functy:extern and friends. Split out from the generic directive rule below so the directive NAME is scoped as a keyword — an extern file is declared by nothing but this line, and it must be visibly different from a comment. Host directives (//vinculum:cache 5m) still fall through to the generic rule.",
+          "match": "(//)(functy)(:)([a-zA-Z_][A-Za-z0-9_-]*)(.*)$",
+          "captures": {
+            "0": { "name": "comment.line.double-slash.directive.functy" },
+            "2": { "name": "entity.name.namespace.directive.functy" },
+            "4": { "name": "keyword.control.directive.functy" },
+            "5": { "name": "meta.directive.arguments.functy" }
+          }
+        },
         {
           "comment": "Directive comment: //<namespace>:<name> with no space after //",
           "name": "comment.line.double-slash.directive.functy",
@@ -98,6 +109,11 @@
         {
           "name": "support.type.primitive.functy",
           "match": "\\b(string|number|bool|any)\\b"
+        },
+        {
+          "comment": "`error` is both a built-in named type (var e: error, catch e: error) and a built-in function (error(\"boom\")). type_keyword is included before builtin_function, so this rule must exclude the call form or it would swallow it.",
+          "name": "support.type.primitive.functy",
+          "match": "\\b(error)\\b(?!\\s*\\()"
         },
         {
           "comment": "type constructors, only in constructor form: list(...), object({...})",
@@ -190,8 +206,29 @@
       }
     },
     "builtin_function": {
+      "comment": "The baseline built-ins: Stdlib() (typeof, typekind, cond, switch, error, assert), StdlibExtras() (try, can), the CLI's doc/help, and the test-only skip. Deliberately NOT a guess-list — every name here exists in functy's sources.",
       "name": "support.function.builtin.functy",
-      "match": "\\b(assert|skip|error|cond|switch|try|can|typeof|typekind|doc|help|eval)\\b(?=\\s*\\()"
+      "match": "\\b(assert|skip|error|cond|switch|try|can|typeof|typekind|doc|help)\\b(?=\\s*\\()"
+    },
+    "param_modifier": {
+      "patterns": [
+        {
+          "comment": "An optional parameter with no default: `func f(ctx?, x: string)`. The `?` is only legal in an extern file, and it is followed by a ',' or ')' — a ternary's '?' is always followed by an expression, so this cannot steal one.",
+          "match": "([a-zA-Z_][a-zA-Z0-9_]*)(\\?)(?=\\s*[,)]|\\s*:)",
+          "captures": {
+            "1": { "name": "variable.parameter.functy" },
+            "2": { "name": "keyword.operator.optional.functy" }
+          }
+        },
+        {
+          "comment": "A variadic parameter: `func f(*args: string)`. Anchored to the opening paren or a preceding comma so it is never confused with multiplication.",
+          "match": "([(,])(\\s*)(\\*)([a-zA-Z_][a-zA-Z0-9_]*)",
+          "captures": {
+            "3": { "name": "keyword.operator.variadic.functy" },
+            "4": { "name": "variable.parameter.functy" }
+          }
+        }
+      ]
     },
     "function_call": {
       "name": "entity.name.function.call.functy",

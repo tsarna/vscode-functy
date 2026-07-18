@@ -4,6 +4,9 @@ import { symbolsForDocument } from './symbolsClient';
 
 const KIND: Record<string, vscode.SymbolKind | undefined> = {
   func: vscode.SymbolKind.Function,
+  // An extern is a function declaration too — bodiless, describing one the HOST
+  // provides. It carries a signature like any func, so symbolDetail tags it.
+  extern: vscode.SymbolKind.Function,
   const: vscode.SymbolKind.Constant,
   var: vscode.SymbolKind.Variable,
   type: vscode.SymbolKind.Interface,
@@ -31,13 +34,22 @@ function toRange(r: JsonRange): vscode.Range {
 }
 
 /**
- * The outline's secondary text: the signature when there is one, else the kind —
- * prefixed with `private` for a namespace-local declaration, since VS Code has no
- * visibility tag and the leading `_` alone is easy to miss in a long list.
+ * The outline's secondary text: the signature when there is one, else the kind.
+ *
+ * Two tags are prefixed because VS Code renders neither on its own and both
+ * change what the declaration *is*:
+ *   - `private` — a namespace-local declaration; the leading `_` alone is easy to
+ *     miss in a long list.
+ *   - `extern` — a declaration of a function the HOST provides. It carries a
+ *     signature just like a `func`, so without this tag it would be
+ *     indistinguishable from one that is actually defined in the file.
  */
 function symbolDetail(s: FunctySymbol): string {
   const base = s.detail ?? s.kind;
-  return s.private ? `private ${base}` : base;
+  const tags = [s.private ? 'private' : null, s.kind === 'extern' ? 'extern' : null].filter(
+    Boolean,
+  );
+  return tags.length ? `${tags.join(' ')} ${base}` : base;
 }
 
 /**

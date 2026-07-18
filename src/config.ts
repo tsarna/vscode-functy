@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import * as path from 'path';
+import { withMaxSteps } from './protocol';
 
 /** Result of running the functy binary. */
 export interface RunResult {
@@ -27,6 +28,15 @@ export function checkOnSave(): boolean {
 /** Whether to type-check the unsaved buffer live as you type (setting `functy.checkOnType`). */
 export function checkOnType(): boolean {
   return vscode.workspace.getConfiguration('functy').get<boolean>('checkOnType', false);
+}
+
+/**
+ * The per-invocation step budget (setting `functy.maxSteps`), or null to leave it
+ * to functy's own default. See {@link withMaxSteps} for why null, not 0, is unset.
+ */
+export function maxSteps(): number | null {
+  const v = vscode.workspace.getConfiguration('functy').get<number | null>('maxSteps', null);
+  return typeof v === 'number' && v >= 0 ? v : null;
 }
 
 /** Working directory for a run: the document's workspace folder, else its own directory. */
@@ -61,7 +71,7 @@ export function runFuncty(
   opts: { cwd?: string; stdin?: string; token?: vscode.CancellationToken } = {},
 ): Promise<RunResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(functyPath(), args, { cwd: opts.cwd });
+    const child = spawn(functyPath(), withMaxSteps(args, maxSteps()), { cwd: opts.cwd });
     let stdout = '';
     let stderr = '';
 

@@ -1,4 +1,7 @@
 {
+  // functy accepts both `//` and `#` line comments, but VS Code's toggle-comment
+  // takes a single lineComment. `//` is the one to declare: it is what the
+  // formatter emits, and it is the prefix of the `//functy:` file directives.
   "comments": {
     "lineComment": "//",
     "blockComment": ["/*", "*/"]

@@ -9,6 +9,7 @@ import {
   parseDiagnostics,
   parseSymbols,
   tokenizeArgs,
+  withMaxSteps,
   zeroBased,
 } from '../src/protocol';
 
@@ -287,4 +288,47 @@ test('parseSymbols returns [] on garbage and non-reports', () => {
   assert.deepEqual(parseSymbols(''), []);
   assert.deepEqual(parseSymbols('{}'), []); // no symbols array
   assert.deepEqual(parseSymbols(JSON.stringify({ symbols: null })), []);
+});
+
+test('withMaxSteps: unset leaves argv untouched', () => {
+  // The load-bearing case: functy 0.9/0.10 have no --max-steps and would fail
+  // every command if the flag leaked in. Unset must add nothing at all.
+  assert.deepEqual(withMaxSteps(['check', '--json', '-'], null), ['check', '--json', '-']);
+  assert.deepEqual(withMaxSteps([], null), []);
+});
+
+test('withMaxSteps: 0 is a real value (disable the limit), not "unset"', () => {
+  assert.deepEqual(withMaxSteps(['test', '--json'], 0), [
+    'test',
+    '--max-steps',
+    '0',
+    '--json',
+  ]);
+});
+
+test('withMaxSteps: splices after the subcommand', () => {
+  assert.deepEqual(withMaxSteps(['test', '--json'], 5000), [
+    'test',
+    '--max-steps',
+    '5000',
+    '--json',
+  ]);
+});
+
+test('withMaxSteps: stays ahead of run\'s -- argument separator', () => {
+  // Anything after `--` is a user argument evaluated as an HCL expression, so the
+  // flag must land before it or it would be passed to the entry function.
+  assert.deepEqual(withMaxSteps(['run', 'f.cty', '--', '1', '2'], 42), [
+    'run',
+    '--max-steps',
+    '42',
+    'f.cty',
+    '--',
+    '1',
+    '2',
+  ]);
+});
+
+test('withMaxSteps: empty argv is left alone', () => {
+  assert.deepEqual(withMaxSteps([], 42), []);
 });
