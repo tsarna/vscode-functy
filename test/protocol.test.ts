@@ -2,9 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   FunctySymbol,
+  JsonTest,
   compareVersions,
   coreVersion,
   escapeRegex,
+  failuresOf,
   groupByNamespace,
   parseDiagnostics,
   parseSymbols,
@@ -331,4 +333,44 @@ test('withMaxSteps: stays ahead of run\'s -- argument separator', () => {
 
 test('withMaxSteps: empty argv is left alone', () => {
   assert.deepEqual(withMaxSteps([], 42), []);
+});
+
+/** A minimal failed JsonTest with the given failure fields. */
+function failedTest(fields: Partial<JsonTest>): JsonTest {
+  return { name: 't', status: 'failed', duration_ms: 0, ...fields };
+}
+
+test('failuresOf reads the functy >= 0.12 failures array', () => {
+  const t = failedTest({
+    failures: [
+      { message: 'one' },
+      { message: 'two', detail: 'x = 1' },
+    ],
+  });
+  assert.deepEqual(failuresOf(t), [
+    { message: 'one' },
+    { message: 'two', detail: 'x = 1' },
+  ]);
+});
+
+test('failuresOf falls back to the legacy single failure object', () => {
+  const t = failedTest({ failure: { message: 'legacy', detail: 'n = -3' } });
+  assert.deepEqual(failuresOf(t), [{ message: 'legacy', detail: 'n = -3' }]);
+});
+
+test('failuresOf prefers a non-empty failures array over failure', () => {
+  const t = failedTest({
+    failures: [{ message: 'new' }],
+    failure: { message: 'old' },
+  });
+  assert.deepEqual(failuresOf(t), [{ message: 'new' }]);
+});
+
+test('failuresOf ignores an empty failures array and uses failure', () => {
+  const t = failedTest({ failures: [], failure: { message: 'legacy' } });
+  assert.deepEqual(failuresOf(t), [{ message: 'legacy' }]);
+});
+
+test('failuresOf always yields at least one entry for a failed test', () => {
+  assert.deepEqual(failuresOf(failedTest({})), [{ message: 'test failed' }]);
 });

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0
+
+Tracks functy **0.12** (soft `expect` assertions, `test setup` blocks, the
+discarded-expression warning).
+
+The minimum functy version is **unchanged at 0.9.0** — the one report-shape change
+below is read in a backward-compatible way, so the extension keeps working against
+every functy from 0.9.0 onward.
+
+### Changed
+
+- **Test failures: read functy 0.12's `failures` array.** `functy test --json` now
+  reports a `failures` array (one entry per failure) so a test's soft `expect`
+  assertions are all surfaced, replacing the single `failure` object. The Test
+  Explorer reads both shapes — the new array and the legacy single object — so it
+  keeps working against older *and* newer functy binaries, and a failed test now
+  shows every failed expectation (each anchored to its own source range) instead of
+  only the first.
+
 ## 0.2.0
 
 Tracks functy **0.10** (namespaces, `_` visibility, extern declarations) and

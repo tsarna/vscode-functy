@@ -28,6 +28,52 @@ export interface JsonDiagnostics {
   diagnostics: JsonDiagnostic[];
 }
 
+/** One failure of a failed test in a `functy test --json` report. */
+export interface JsonFailure {
+  message: string;
+  detail?: string;
+  location?: JsonRange;
+}
+
+/** One test entry of a `functy test --json` report. */
+export interface JsonTest {
+  name: string;
+  status: 'passed' | 'failed' | 'skipped';
+  duration_ms: number;
+  location?: JsonRange;
+  skip_reason?: string;
+  // functy >= 0.12 reports a `failures` array (one entry per failure, so soft
+  // `expect` failures are all surfaced); older functy reported a single `failure`.
+  // Both are read — see failuresOf.
+  failures?: JsonFailure[];
+  failure?: JsonFailure;
+}
+
+export interface JsonReport {
+  tests: JsonTest[];
+  summary: {
+    passed: number;
+    failed: number;
+    skipped: number;
+    deselected: number;
+  };
+}
+
+/**
+ * The failures of a failed test, tolerating both report shapes: the `failures` array
+ * (functy >= 0.12) or the legacy single `failure` object. Always returns at least one
+ * entry for a failed test so the UI has something to show.
+ */
+export function failuresOf(t: JsonTest): JsonFailure[] {
+  if (t.failures && t.failures.length > 0) {
+    return t.failures;
+  }
+  if (t.failure) {
+    return [t.failure];
+  }
+  return [{ message: 'test failed' }];
+}
+
 /**
  * One symbol from `functy symbols --json`.
  *

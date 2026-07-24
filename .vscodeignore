@@ -2,6 +2,7 @@
 .vscodeignore
 FUTURE.md
 renovate.json
+tasks/**
 .vscode/**
 node_modules/**
 src/**

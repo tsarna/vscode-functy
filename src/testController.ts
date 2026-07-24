@@ -1,31 +1,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { cwdFor, runFuncty } from './config';
-import { escapeRegex, JsonRange, zeroBased } from './protocol';
+import { escapeRegex, failuresOf, JsonRange, JsonReport, JsonTest, zeroBased } from './protocol';
 import { symbolsForDocument, symbolsForPath } from './symbolsClient';
-
-/** Shape of `functy test --json` output. */
-interface JsonReport {
-  tests: JsonTest[];
-  summary: {
-    passed: number;
-    failed: number;
-    skipped: number;
-    deselected: number;
-  };
-}
-interface JsonTest {
-  name: string;
-  status: 'passed' | 'failed' | 'skipped';
-  duration_ms: number;
-  location?: JsonRange;
-  skip_reason?: string;
-  failure?: {
-    message: string;
-    detail?: string;
-    location?: JsonRange;
-  };
-}
 
 function rangeFrom(loc: JsonRange | undefined): vscode.Range | undefined {
   if (!loc) {
@@ -284,20 +261,26 @@ export function createTestController(context: vscode.ExtensionContext): vscode.T
           const reason = t.skip_reason ? ` — ${t.skip_reason}` : '';
           run.appendOutput(crlf(`⊘ ${item.label} — skipped${reason}\n`), undefined, item);
         } else {
-          const detail = t.failure?.detail
-            ? `${t.failure.message}\n\n${t.failure.detail}`
-            : t.failure?.message ?? 'test failed';
-          const msg = new vscode.TestMessage(detail);
-          const range = rangeFrom(t.failure?.location);
-          if (range) {
-            msg.location = new vscode.Location(uri, range);
+          const failures = failuresOf(t);
+          const messages = failures.map((f) => {
+            const detail = f.detail ? `${f.message}\n\n${f.detail}` : f.message;
+            const msg = new vscode.TestMessage(detail);
+            const range = rangeFrom(f.location);
+            if (range) {
+              msg.location = new vscode.Location(uri, range);
+            }
+            return msg;
+          });
+          run.failed(item, messages, t.duration_ms);
+          // One terminal line per failure, each anchored to its own range.
+          for (const f of failures) {
+            const range = rangeFrom(f.location);
+            run.appendOutput(
+              crlf(`✘ ${item.label} (${ms} ms): ${f.message}\n`),
+              range ? new vscode.Location(uri, range) : undefined,
+              item,
+            );
           }
-          run.failed(item, msg, t.duration_ms);
-          run.appendOutput(
-            crlf(`✘ ${item.label} (${ms} ms): ${t.failure?.message ?? 'test failed'}\n`),
-            range ? new vscode.Location(uri, range) : undefined,
-            item,
-          );
         }
       }
     }
